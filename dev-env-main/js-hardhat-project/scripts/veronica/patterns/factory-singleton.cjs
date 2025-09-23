@@ -42,6 +42,8 @@ class ProductInterface {
     }
 }
 
+
+
 // Interface for all products
 class ProductInterface {
     constructor() {
@@ -64,19 +66,9 @@ class ProductInterface {
 }
 
 class Factory {
-    create(type) {
-        let product;
-        if (type === 'ProductA') {
-            product = new this.registry[type]();
-        } else if (type === 'ProductB') {
-            product = new this.registry[type]();
-        }
-        return product;
-    }
-
-    
     constructor() {
         this.registry = {};
+        this.singletons = {};
         // Register default products
         this.register('ProductA', ProductA);
         this.register('ProductB', ProductB);
@@ -88,53 +80,59 @@ class Factory {
     }
 
     create(type, ...args) {
-        const ProductClass = this.registry[type];
-        if (!ProductClass) {
+        if (!this.registry[type]) {
             throw new Error(`Unknown product type: ${type}`);
         }
-        return new ProductClass(...args);
+        if (!this.singletons[type]) {
+            this.singletons[type] = this.registry[type].getInstance(...args);
+        }
+        return this.singletons[type];
     }
 
     async createAsync(type, ...args) {
-        const ProductClass = this.registry[type];
-        if (!ProductClass) {
+        if (!this.registry[type]) {
             throw new Error(`Unknown product type: ${type}`);
         }
-        if (typeof ProductClass.createAsync === 'function') {
-            return await ProductClass.createAsync(...args);
+        if (!this.singletons[type]) {
+            if (typeof this.registry[type].getInstanceAsync === 'function') {
+                this.singletons[type] = await this.registry[type].getInstanceAsync(...args);
+            } else {
+                this.singletons[type] = this.registry[type].getInstance(...args);
+            }
         }
-        // fallback to sync creation
-        return new ProductClass(...args);
+        return this.singletons[type];
     }
-
-      
 }
 
 class ProductA extends ProductInterface {
-  constructor() {
-      this.name = 'ProductA';
-      this.price = 100;
-      this.description = 'ProductA description'
-  }
-
-  operation() {
-      console.log('ProductA operation');
-  }
-    
+    constructor() {
+        super();
+        this.name = 'ProductA';
+        this.price = 100;
+        this.description = 'ProductA description';
+    }
+    operation() {
+        console.log('ProductA operation');
+    }
     getName() {
         return this.name;
     }
-
     getPrice() {
         return this.price;
     }
-
-    getDescription()   {
+    getDescription() {
         return this.description;
     }
-}    
+    static getInstance() {
+        if (!ProductA._instance) {
+            ProductA._instance = new ProductA();
+        }
+        return ProductA._instance;
+    }
+}
 class ProductC extends ProductInterface {
     constructor() {
+        super();
         this.name = 'ProductC';
         this.price = 300;
         this.description = 'ProductC description';
@@ -151,30 +149,47 @@ class ProductC extends ProductInterface {
     getDescription() {
         return this.description;
     }
-    // Example async creation
-    static async createAsync() {
-        // Simulate async setup
-        await new Promise(res => setTimeout(res, 100));
-        return new ProductC();
+    static async getInstanceAsync() {
+        if (!ProductC._instance) {
+            // Simulate async setup
+            await new Promise(res => setTimeout(res, 100));
+            ProductC._instance = new ProductC();
+        }
+        return ProductC._instance;
+    }
+    static getInstance() {
+        if (!ProductC._instance) {
+            ProductC._instance = new ProductC();
+        }
+        return ProductC._instance;
     }
 }
 
 class ProductB extends ProductInterface {
+    constructor() {
+        super();
+        this.name = 'ProductB';
+        this.price = 200;
+        this.description = 'ProductB description';
+    }
     operation() {
         console.log('ProductB operation');
     }
-
-   getName() {
-        return 'ProductB';
-   } 
-
-   getPrice() {
-        return 200;
-   }
-
+    getName() {
+        return this.name;
+    }
+    getPrice() {
+        return this.price;
+    }
     getDescription() {
-        return 'ProductB description';
-   }
+        return this.description;
+    }
+    static getInstance() {
+        if (!ProductB._instance) {
+            ProductB._instance = new ProductB();
+        }
+        return ProductB._instance;
+    }
 }
 
 // Usage Example
