@@ -1,0 +1,24 @@
+
+
+script de inicializacao - ligar no package,json
+colocar test de hard hat no script de inicializacao
+
+
+criar funcao para ligar/desligar ambiente hardhat 
+criar funcao para impersonate account
+
+implement function to code function into Hex call
+
+turn it into Class Objects
+
+check better tools to test, like hardhat tools, foundry etc...
+
+fund from whale
+Mint ?
+wrap WETH (wth fund from whale)
+transfer acccount to account - weth, usdc(with funding)
+
+multihop
+
+split apart Qt workspace. python too?
+

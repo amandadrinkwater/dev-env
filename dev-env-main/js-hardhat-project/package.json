@@ -1,0 +1,29 @@
+{
+  "name": "js-project",
+  "version": "1.0.0",
+  "description": "",
+  "type": "module",
+  "scripts": {
+    "ext": "code --list-extensions > extensions.txt",
+    "compile": "npx hardhat compile",
+    "test": "npx hardhat test",
+    "run-swap": "npx hardhat run scripts/swap.cjs --network hardhat",
+    "run-execution": "npx hardhat run scripts/execution.cjs --network hardhat",
+    "run-arbsim": "npx hardhat run scripts/arb-sim-uni-sushi.cjs --network hardhat",
+    "run_demo_js": "node src/jscript/index.cjs",
+    "deploy": "npx hardhat run scripts/deploy.cjs --network hardhat"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@nomicfoundation/hardhat-toolbox": "^6.1.0",
+    "hardhat": "^2.26.2"
+  },
+  "dependencies": {
+    "@openzeppelin/contracts": "^5.4.0",
+    "@uniswap/v2-core": "^1.0.1",
+    "@uniswap/v2-periphery": "^1.1.0-beta.0",
+    "dotenv": "^17.2.1"
+  }
+}

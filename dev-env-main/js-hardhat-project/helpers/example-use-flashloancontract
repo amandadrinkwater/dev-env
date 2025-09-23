@@ -1,0 +1,26 @@
+
+
+const { ethers } = require("hardhat");
+const FlashloanContract = require("./FlashloanContract");
+
+async function main() {
+  const [executor] = await ethers.getSigners();
+  const contractAddress = "0xAaBcFE801e4C9086F3E72e4920EFb381965c854b";
+
+  const flashloan = new FlashloanContract(contractAddress, executor);
+
+  const paramsArray = [
+    { targetToken: "0x6B175474E89094C44Da98b954EedeAC495271d0F", minAmountOut: ethers.parseUnits("1000", 18), deadline: 1700000000 },
+    { targetToken: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48", minAmountOut: ethers.parseUnits("500", 6), deadline: 1700000500 }
+  ];
+
+  // Encode array of tuples
+  const encodedParams = flashloan.encodeParamsArray(paramsArray);
+
+  console.log("Encoded multi-tuple params:", encodedParams);
+
+  // Example execution (won’t run unless contract & environment support it)
+  // await flashloan.executeFlashloan(token0Address, token1Address, ethers.parseUnits("500", 18), encodedParams);
+}
+
+main().catch(console.error);

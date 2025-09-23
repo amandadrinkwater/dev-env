@@ -1,0 +1,109 @@
+
+
+Step 1 – Environment -> OK -> usei outro comando, usei com arquivo hardhat config atual plus --netowork hardhat
+
+Confirm hardhat.config.cjs has mainnet forking with your RPC key.
+
+Run:
+
+npx hardhat node --fork https://eth-mainnet.alchemyapi.io/v2/YOUR_KEY
+
+
+This ensures addresses like Uniswap router actually exist.
+
+-> colocar como script
+
+Step 2 – Address sanity check -> OK
+
+// code Ok, make it to transverse all addresses
+
+In a test script (check-addresses.cjs):
+
+const { ethers } = require("ethers");
+const addresses = require("./utils/addresses.cjs");
+
+console.log("Check Router:", addresses.ROUTERS.UNIV2, ethers.isAddress(addresses.ROUTERS.UNIV2));
+console.log("Check WETH Whale:", addresses.WHALES.WETH[0], ethers.isAddress(addresses.WHALES.WETH[0]));
+
+
+👉 If any prints false, we retype that address cleanly.
+
+Step 3 – Impersonate whale & check balance
+3.1 Check Balance -> ok, checkbalance.cjs
+check trasnfer between accounts
+check gas price too
+
+Minimal test (whale-test.cjs):
+
+const hre = require("hardhat");
+const { ethers } = hre;
+const addresses = require("./utils/addresses.cjs");
+const abis = require("./utils/abis.cjs");
+
+async function main() {
+  const whaleAddress = addresses.WHALES.WETH[0];
+  await hre.network.provider.request({
+    method: "hardhat_impersonateAccount",
+    params: [whaleAddress],
+  });
+  const whale = await ethers.getSigner(whaleAddress);
+
+  const WETH = new ethers.Contract(addresses.TOKENS.WETH, abis.ERC20, whale);
+  const bal = await WETH.balanceOf(whaleAddress);
+  console.log("Whale WETH balance:", bal.toString());
+}
+
+main();
+
+
+👉 If balance is 0, we need a different whale.
+
+Parei de testar send-test, manipulacao de conta com problema
+testar swap para finalmente testar o nosso contrato
+testar contratos
+testar MEV (serah necessario?)
+
+Step 4 – Transfer to executor -> Ok
+
+Extend test above
+
+const [executor] = await ethers.getSigners();
+await WETH.transfer(executor.address, bal / 10n);
+console.log("Executor balance after transfer:", (await WETH.balanceOf(executor.address)).toString());
+
+Step 5 – Router instantiation
+
+Test router separately:
+
+const uniRouter = new ethers.Contract(
+  addresses.ROUTERS.UNIV2,
+  abis.UNIV2_ROUTER,
+  whale
+);
+console.log("Router address OK:", uniRouter.target);
+
+Step 6 – Reconnect with manipulate-pool.cjs
+
+Replace the impersonation / transfer code with the tested working snippets.
+
+Only then try swap calls.
+
+
+
+inal Plan of Attack (Big Picture)
+
+Fix addresses → ensure all tokens/routers/whales are valid (ethers.isAddress()).
+
+Whale balance test → verify whales really hold tokens.
+
+Executor funding test → confirm transfer works.
+
+Router instantiation test → confirm Uniswap/Sushi routers load.
+
+Minimal swap test → single trade (e.g., WETH → DAI).
+
+Bot loop integration → only after tests pass, plug into arbitrage cycle logic.
+
+---
+
+Once these three pass, we’ll move on to executor funding & swaps inside manipulate-pool.cjs.
