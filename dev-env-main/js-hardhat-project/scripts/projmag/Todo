@@ -1,39 +1,40 @@
 
 
-script de inicializacao - ligar no package,json
 colocar test de hard hat no script de inicializacao
 
-
 criar funcao para ligar/desligar ambiente hardhat 
-criar funcao para impersonate account
 
 implement function to code function into Hex call
 
-turn it into Class Objects
 
 check better tools to test, like hardhat tools, foundry etc...
 
-fund from whale
 Mint ?
 wrap WETH (wth fund from whale)
 transfer acccount to account - weth, usdc(with funding)
 
-multihop
-
-split apart Qt workspace. python too?
 
 script para testar a instalacao do node, etc... nao sei o que colocar
 setar e verificar para hardhat e para normal... algum objeto para administrar a instalacao?
 
-aprove
-allowance
-pool
-??
+
 
 multitransfer
 multihop
 
-uniswap query
-yus
+uniswap query e flashswap
+integrar com yus
 
-flashloan
+MEV ???? vai ser necessario?
+
+// one class for weth to wrap eth
+
+/* to talk with deep, turn Pool.csj them into eip-1599
+
+parei analisando e criando classe para Uniswap query
+readingUniswapQuery.cjs de env-tests
+
+falta testar use cases e as classes de Pool.cjs
+tem muita coisa de utilities que pode ir para outro arquivo
+
+tem coisas no OldPool que valem a pena virar uses cases

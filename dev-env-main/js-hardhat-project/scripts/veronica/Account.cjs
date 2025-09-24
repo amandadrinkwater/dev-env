@@ -21,6 +21,12 @@ class Account {
     }
   }
 
+  static checkAccountAddress(address) {
+    if (!ethers.isAddress(address)) {
+      throw new Error(`Invalid Ethereum address: ${address}`);
+    }
+  }
+
   async getNativeBalance() {
     try {
       const rawBalance = await this.provider.getBalance(this.address);
@@ -126,4 +132,6 @@ class HardhatAccount extends Account {
   }
 }
 
-module.exports =  Account ;
+Account.HardhatAccount = HardhatAccount;
+
+module.exports =  Account;
