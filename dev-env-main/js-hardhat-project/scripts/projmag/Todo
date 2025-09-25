@@ -38,3 +38,5 @@ falta testar use cases e as classes de Pool.cjs
 tem muita coisa de utilities que pode ir para outro arquivo
 
 tem coisas no OldPool que valem a pena virar uses cases
+
+ask deep if we can delete or add product features down the hieararchy,
