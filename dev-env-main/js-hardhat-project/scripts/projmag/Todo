@@ -42,3 +42,11 @@ tem coisas no OldPool que valem a pena virar uses cases
 ask deep if we can delete or add product features down the hieararchy,
 
 continuar a trabalhar com o padrao dispatcher
+
+transportar funcoes para dentro de Pool
+checar se de Pool saem Tokens, not address
+refatorar nomes de funcoes
+
+chain is coupled with all objects, we may decouple and take info functions to become static... to give the state at some point in time
+
+we may create a "ethers" object for production that changes over blocks and another for "frozen" state for inquiries at a specific block and chain

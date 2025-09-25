@@ -68,7 +68,14 @@ const abis = require("../utils/abis.cjs");
 const { ERC20Token } = require("./ERC20Token.cjs");
 
 const ERC20_ABI = abis.ERC20;
-const UNISWAP_V2_PAIR_ABI = abis.UNISWAP_V2_PAIR;
+const UNISWAP_V2_PAIR_ABI = abis.UNIV2_PAIR;
+
+// ✅ DEBUG: Verify ABI is loaded correctly
+// take it off later
+console.log("🔧 ABI Status:", {
+  ERC20_ABI: ERC20_ABI ? `✅ Loaded (${ERC20_ABI.length} items)` : "❌ Missing",
+  UNISWAP_V2_PAIR_ABI: UNISWAP_V2_PAIR_ABI ? `✅ Loaded (${UNISWAP_V2_PAIR_ABI.length} items)` : "❌ Missing"
+});
 
 // Constants
 const DEX_TYPES = {
@@ -120,51 +127,63 @@ class Pool {
     }
   }
 
-  async init() {
+ async init() {
     try {
-      // Validate DEX type
-      if (!Object.values(DEX_TYPES).includes(this.dexType)) {
-        throw new Error(`Unsupported DEX type: ${this.dexType}`);
-      }
 
-      // Initialize based on DEX type
-      switch (this.dexType) {
-        case DEX_TYPES.UNISWAP_V2:
-        case DEX_TYPES.SUSHISWAP:
-        case DEX_TYPES.PANCKESWAP:
-          this.contract = new ethers.Contract(this.poolAddress, UNISWAP_V2_PAIR_ABI, this.provider);
-          break;
-        // Add other DEX types here as needed
-        default:
-          throw new Error(`Unsupported DEX type: ${this.dexType}`);
-      }
+      // I am not sure about this fix
+         if (this._isBatchInitialized) {
+            console.log(`🏊 Batch Pool Already Initialized: ${this.poolAddress}`);
+            console.log(`   Tokens: ${this.token0.symbol}/${this.token1.symbol}`);
+            return this;
+        }
+        // Validate DEX type
+        if (!Object.values(DEX_TYPES).includes(this.dexType)) {
+            throw new Error(`Unsupported DEX type: ${this.dexType}`);
+        }
 
-      // Verify contract exists by making a simple call
-      try {
-        await this.contract.token0();
-      } catch (error) {
-        throw new Error(`Contract not found or invalid ABI at address: ${this.poolAddress}`);
-      }
+        // Initialize based on DEX type
+        switch (this.dexType) {
+            case DEX_TYPES.UNISWAP_V2:
+            case DEX_TYPES.SUSHISWAP:
+            case DEX_TYPES.PANCKESWAP:
+                this.contract = new ethers.Contract(this.poolAddress, UNISWAP_V2_PAIR_ABI, this.provider);
+                break;
+            // Add other DEX types here as needed
+            default:
+                throw new Error(`Unsupported DEX type: ${this.dexType}`);
+        }
 
-      // Get pool information
-      await this._loadPoolData();
-      
-      console.log("\n🏊 Pool Initialized:");
-      console.log("Address:", this.poolAddress);
-      console.log("DEX Type:", this.dexType);
-      console.log("Token 0:", this.token0.address, `(${this.token0.symbol})`);
-      console.log("Token 1:", this.token1.address, `(${this.token1.symbol})`);
-      console.log("Reserves:", {
-        [this.token0.symbol]: ethers.formatUnits(this.reserve0, this.token0.decimals),
-        [this.token1.symbol]: ethers.formatUnits(this.reserve1, this.token1.decimals)
-      });
+        // Verify contract exists by making a simple call
+        try {
+            await this.contract.token0();
+        } catch (error) {
+            throw new Error(`Contract not found or invalid ABI at address: ${this.poolAddress}`);
+        }
 
-      return this;
+        // Get pool information
+        await this._loadPoolData();
+        
+        // 🚨 FIXED LOGGING: Use safe property access
+        console.log("\n🏊 Pool Initialized:");
+        console.log("Address:", this.poolAddress);
+        console.log("DEX Type:", this.dexType);
+        console.log("Token 0:", this.token0.address, `(${this.token0.symbol})`);
+        console.log("Token 1:", this.token1.address, `(${this.token1.symbol})`);        
+        if (this.token0 && this.token1 && this.reserve0 !== null && this.reserve1 !== null) {
+            console.log("Reserves:", {
+                [this.token0.symbol]: ethers.formatUnits(this.reserve0, this.token0.decimals),
+                [this.token1.symbol]: ethers.formatUnits(this.reserve1, this.token1.decimals)
+            });
+        } else {
+            console.log("Reserves: Data not fully loaded");
+        }
+
+        return this;
     } catch (error) {
-      console.error(`Error initializing pool at ${this.poolAddress}:`, error);
-      throw error;
+        console.error(`Error initializing pool at ${this.poolAddress}:`, error);
+        throw error;
     }
-  }
+}
 
   async _loadPoolData() {
     try {
@@ -602,21 +621,6 @@ async _getAmountOut(amountInWei, tokenIn, tokenOut) {
 }
 
 /**
- * Swap exact tokens for tokens (convenience method)
- */
-async swapExactTokensForTokens(account, amountIn, tokenInSymbol, options = {}) {
-  try {
-    const tokenIn = tokenInSymbol.toLowerCase() === this.token0.symbol.toLowerCase() ? 
-                   this.token0 : this.token1;
-    
-    return this.swap(account, tokenIn, amountIn, options);
-  } catch (error) {
-    console.error("Error in swapExactTokensForTokens:", error);
-    throw error;
-  }
-}
-
-/**
  * Swap exact input tokens for minimum output tokens (Uniswap V2 style)
  * @param {Account} account - The account performing the swap
  * @param {string|number} amountIn - Exact input amount
@@ -957,7 +961,7 @@ async getOptimalSwapAmount(tokenInSymbol, maxPriceImpact = 1.0) {
     const tokenAddress = typeof token === 'string' ? token : token.address;
     return this._isSameAddress(this.token0.address, tokenAddress) ||
            this._isSameAddress(this.token1.address, tokenAddress);
-  }
+}
 
   getOtherToken(token) {
     const tokenAddress = typeof token === 'string' ? token : token.address;
@@ -969,8 +973,7 @@ async getOptimalSwapAmount(tokenInSymbol, maxPriceImpact = 1.0) {
     } else {
       throw new Error("Token not found in pool");
     }
-  }
-
+}
   static async createFromTokens(tokenA, tokenB, chain, dexType = DEX_TYPES.UNISWAP_V2) {
     try {
       // Validate inputs using duck typing
@@ -984,9 +987,10 @@ async getOptimalSwapAmount(tokenInSymbol, maxPriceImpact = 1.0) {
       let factoryAddress;
       
       switch (dexType) {
-        case DEX_TYPES.UNISWAP_V2:
-          factoryAddress = addresses.UNISWAP_V2_FACTORY || "0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f";
+        case DEX_TYPES.UNISWAP_V2: 
+          factoryAddress = addresses.UNIV2_FACTORY || "0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f";
           break;
+
         case DEX_TYPES.SUSHISWAP:
           factoryAddress = addresses.SUSHISWAP_FACTORY || "0xC0AEe478e3658e2610c5F7A4A2E1777cE9e4f2Ac";
           break;
@@ -997,7 +1001,10 @@ async getOptimalSwapAmount(tokenInSymbol, maxPriceImpact = 1.0) {
           throw new Error(`Unsupported DEX type: ${dexType}`);
       }
 
-      const UNISWAP_V2_FACTORY_ABI = abis.UNISWAP_V2_FACTORY;
+      
+      // 🚨 FIX: Change from UNISWAP_V2_FACTORY to UNIV2_FACTORY
+      const UNISWAP_V2_FACTORY_ABI = abis.UNIV2_FACTORY;
+
       const factory = new ethers.Contract(factoryAddress, UNISWAP_V2_FACTORY_ABI, chain.provider);
       
       const poolAddress = await factory.getPair(tokenA.address, tokenB.address);
@@ -1029,6 +1036,188 @@ async getOptimalSwapAmount(tokenInSymbol, maxPriceImpact = 1.0) {
     await pool.init();
     return pool;
   }
+
+  /**
+ * Create a Pool instance with pre-fetched data (optimized for batch operations)
+ * Bypasses individual RPC calls by using pre-fetched token and reserve data
+ * @param {string} poolAddress - The pool address
+ * @param {Object} chain - Chain instance
+ * @param {Object} token0Data - Pre-fetched token0 data {address, symbol, decimals, name}
+ * @param {Object} token1Data - Pre-fetched token1 data {address, symbol, decimals, name}
+ * @param {Object} reserves - Pre-fetched reserves {reserve0, reserve1, blockTimestamp}
+ * @param {string} dexType - DEX type
+ * @returns {Promise<Pool>} Pool instance
+ */
+/**
+ * Create a Pool instance with pre-fetched data (optimized for batch operations)
+ */
+static async createWithData(poolAddress, chain, token0Data, token1Data, reserves, dexType = DEX_TYPES.UNISWAP_V2) {
+    try {
+        // 🚨 ADDED: Debug ABI check
+        if (!UNISWAP_V2_PAIR_ABI || UNISWAP_V2_PAIR_ABI.length === 0) {
+            throw new Error("UNISWAP_V2_PAIR_ABI is not properly loaded. Check abis.cjs file.");
+        }
+
+        // Input validation
+        if (!poolAddress) throw new Error("Pool address is required");
+        if (!chain?.provider) throw new Error("Valid chain instance with provider is required");
+        if (!token0Data?.address || !token1Data?.address) throw new Error("Valid token data is required");
+        if (!reserves?.reserve0 || !reserves?.reserve1) throw new Error("Valid reserves data is required");
+
+        // Validate and normalize address
+        let normalizedAddress;
+        try {
+            normalizedAddress = ethers.getAddress(poolAddress);
+        } catch {
+            throw new Error("Invalid pool address format");
+        }
+
+        const pool = new Pool(normalizedAddress, chain, dexType);
+        
+        // 🚨 ADDED: Debug log
+        console.log(`🔧 Creating pool contract with ABI length: ${UNISWAP_V2_PAIR_ABI.length}`);
+
+        // Initialize contract based on DEX type
+        switch (dexType) {
+            case DEX_TYPES.UNISWAP_V2:
+            case DEX_TYPES.SUSHISWAP:
+            case DEX_TYPES.PANCKESWAP:
+                pool.contract = new ethers.Contract(normalizedAddress, UNISWAP_V2_PAIR_ABI, chain.provider);
+                break;
+            default:
+                throw new Error(`Unsupported DEX type: ${dexType}`);
+        }
+
+        // 🚨 FIX: Create lightweight token objects instead of full ERC20Token instances
+        pool.token0 = {
+            address: token0Data.address,
+            symbol: token0Data.symbol,
+            decimals: token0Data.decimals,
+            name: token0Data.name || token0Data.symbol,
+            // Add contract for compatibility
+            contract: new ethers.Contract(token0Data.address, ERC20_ABI, chain.provider)
+        };
+
+        pool.token1 = {
+            address: token1Data.address,
+            symbol: token1Data.symbol,
+            decimals: token1Data.decimals,
+            name: token1Data.name || token1Data.symbol,
+            contract: new ethers.Contract(token1Data.address, ERC20_ABI, chain.provider)
+        };
+
+        // Set pre-fetched reserves
+        pool.reserve0 = BigInt(reserves.reserve0.toString());
+        pool.reserve1 = BigInt(reserves.reserve1.toString());
+        
+        // Get total supply
+        try {
+            pool.totalSupply = await pool.contract.totalSupply();
+            console.log(`✅ Total supply fetched: ${pool.totalSupply}`);
+        } catch (error) {
+            console.warn(`⚠️ Could not fetch total supply for ${poolAddress}, setting to 0`);
+            pool.totalSupply = 0n;
+        }
+
+        console.log(`✅ Pool created with pre-fetched data: ${pool.token0.symbol}/${pool.token1.symbol}`);
+        
+        return pool;
+    } catch (error) {
+        console.error(`❌ Error creating pool with pre-fetched data for ${poolAddress}:`, error);
+        throw error;
+    }
+}/**
+ * Create multiple pools efficiently with batch data
+ * Dramatically reduces RPC calls compared to individual Pool.create() calls
+ * @param {Array} poolDataArray - Array of pool data objects
+ * @param {Object} chain - Chain instance
+ * @param {string} dexType - DEX type
+ * @returns {Promise<Array>} Array of Pool instances
+ */
+static async createBatch(poolDataArray, chain, dexType = DEX_TYPES.UNISWAP_V2) {
+    try {
+        if (!Array.isArray(poolDataArray)) {
+            throw new Error("poolDataArray must be an array");
+        }
+
+        console.log(`🏭 Creating ${poolDataArray.length} pools in batch...`);
+        
+        const pools = [];
+        const results = await Promise.allSettled(
+            poolDataArray.map(async (poolData, index) => {
+                try {
+                    if (!poolData.poolAddress || !poolData.token0 || !poolData.token1 || !poolData.reserves) {
+                        throw new Error("Invalid pool data structure");
+                    }
+
+                    const pool = await Pool.createWithData(
+                        poolData.poolAddress,
+                        chain,
+                        poolData.token0,
+                        poolData.token1,
+                        poolData.reserves,
+                        dexType
+                    );
+                    
+                    pools.push(pool);
+                    return { success: true, index, address: poolData.poolAddress };
+                } catch (error) {
+                    console.error(`❌ Failed to create pool ${index} (${poolData.poolAddress}):`, error.message);
+                    return { success: false, index, address: poolData.poolAddress, error: error.message };
+                }
+            })
+        );
+
+        // Analyze results
+        const successful = results.filter(r => r.value?.success).length;
+        const failed = results.filter(r => !r.value?.success).length;
+        
+        console.log(`🎉 Batch creation completed: ${successful}/${poolDataArray.length} successful`);
+        if (failed > 0) {
+            console.log(`⚠️  ${failed} pools failed to create`);
+        }
+
+        return pools;
+    } catch (error) {
+        console.error("❌ Error in batch pool creation:", error);
+        throw error;
+    }
+}
+
+/**
+ * Get pool info without making additional RPC calls (uses pre-fetched data)
+ */
+async getPoolInfoQuick() {
+    try {
+        const lpDecimals = await this.contract.decimals().catch(() => 18); // Default to 18 if fails
+        
+        return {
+            address: this.poolAddress,
+            dexType: this.dexType,
+            tokens: {
+                token0: {
+                    address: this.token0.address,
+                    symbol: this.token0.symbol,
+                    decimals: this.token0.decimals
+                },
+                token1: {
+                    address: this.token1.address,
+                    symbol: this.token1.symbol,
+                    decimals: this.token1.decimals
+                }
+            },
+            reserves: {
+                [this.token0.symbol]: ethers.formatUnits(this.reserve0, this.token0.decimals),
+                [this.token1.symbol]: ethers.formatUnits(this.reserve1, this.token1.decimals)
+            },
+            totalSupply: ethers.formatUnits(this.totalSupply, lpDecimals),
+            // Note: TVL calculation would require price data, so we skip it here
+        };
+    } catch (error) {
+        console.error("Error getting quick pool info:", error);
+        throw error;
+    }
+}
 
   // Utility method to get pool info for display
   async getPoolInfo() {
@@ -1241,50 +1430,6 @@ async function demoAdvancedPoolFeatures() {
   }
 }
 
-/**
- * Demo function showing swap functionality
- */
-async function demoSwapFunctionality() {
-  try {
-    console.log("\n🔄 Starting Pool Demo - Swap Functionality\n");
-    
-    const provider = new ethers.JsonRpcProvider(process.env.RPC_URL || "http://localhost:8545");
-    const chain = { provider, chainId: 1 };
-    
-    // const USDC_ETH_POOL = "0xB4e16d0168e52d35CaCD2c6185b44281Ec28C9Dc";
-
-    const USDC_ETH_POOL = addresses.POOLS.USDC_ETH_POOL
-
-    const pool = await Pool.create(USDC_ETH_POOL, chain, Pool.DEX_TYPES.UNISWAP_V2);
-    
-    // Get swap quote
-    console.log("💡 Swap Quote Example:");
-    const quote = await pool.getSwapQuote("1", "ETH", 0.5);
-    console.log("Swap Quote Details:");
-    console.log(`Input: ${quote.input.amount} ${quote.input.symbol}`);
-    console.log(`Output: ${quote.output.amount} ${quote.output.symbol}`);
-    console.log(`Price Impact: ${quote.priceImpact}`);
-    console.log(`Minimum Received: ${quote.output.amountMin} ${quote.output.symbol}`);
-    
-    // Get optimal swap amount
-    console.log("\n🎯 Optimal Swap Calculation:");
-    const optimal = await pool.getOptimalSwapAmount("ETH", 1.0);
-    console.log(`Optimal swap amount for <1% price impact: ${optimal.optimalAmount} ETH`);
-    console.log(`Estimated price impact: ${optimal.estimatedPriceImpact}%`);
-    
-    // Simulate swap (without actual execution)
-    console.log("\n⚡ Swap Simulation (no actual transaction):");
-    console.log("In production, you would call pool.swap() with a real account");
-    console.log("Example: await pool.swap(account, 'ETH', '1', { slippage: 0.5 })");
-    
-    console.log("\n✅ Swap Functionality Demo Completed!");
-    return { pool, quote, optimal };
-    
-  } catch (error) {
-    console.error("❌ Swap demo failed:", error.message);
-    throw error;
-  }
-}
 
 /**
  * Demo function showing swap functionality
@@ -1456,6 +1601,7 @@ await pool.swap(account, ethToken, "1", {
     throw error;
   }
 }
+
 
 /**
  * Demo function showing advanced swap strategies

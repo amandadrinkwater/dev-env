@@ -107,3 +107,9 @@ Bot loop integration → only after tests pass, plug into arbitrage cycle logic.
 ---
 
 Once these three pass, we’ll move on to executor funding & swaps inside manipulate-pool.cjs.
+
+
+contract UniswapQuery
+test singleton getActualBlock()
+
+change name Pairs and Pools para nao dar confusao
