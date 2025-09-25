@@ -70,6 +70,19 @@ class ERC20Token {
     return this.name;
   } 
 
+  // helper: fetch symbol and decimals
+  async fetchTokenInfo(address, provider) {
+    try {
+
+      const symbol = this.getSymbol();
+      const decimals = this.getDecimals();
+      
+      return { symbol, decimals };
+    } catch (e) {
+      return { symbol: "UNKNOWN", decimals: 0 }; // fallback
+    }
+  }
+
   async getTotalSupply() {
     try {
       const totalSupply = await this.contract.totalSupply();

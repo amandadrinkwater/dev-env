@@ -11,9 +11,9 @@ const CHAIN_TYPES = {
 };
 
 class Chain {
-  constructor(ethersProvider, chainType = CHAIN_TYPES.DEFAULT) {
-    this.ethers = ethersProvider;
-    this.provider = ethersProvider.provider;
+  constructor(ethers, chainType = CHAIN_TYPES.DEFAULT) {
+    this.ethers = ethers;
+    this.provider = ethers.provider;
     this.chainType = chainType;
     this.network = null;
   }
