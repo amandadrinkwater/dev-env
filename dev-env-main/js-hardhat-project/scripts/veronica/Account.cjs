@@ -1,5 +1,3 @@
-
-
 const { ethers } = require("ethers");
 const Chain = require("./Chain.cjs");
 
@@ -42,26 +40,28 @@ class Account {
       console.log(`\n💸 Transferring ${amount} ETH from ${this.address} to ${toAddress}...`);
       
       const value = ethers.parseEther(amount.toString());
-      const senderBalance = await this.getNativeBalance();
-      
+      const senderBalance = await this.provider.getBalance(this.address);
+
       if (senderBalance < value) {
-        throw new Error(`Insufficient ETH balance. Needed: ${ethers.formatEther(value)} ETH, Has: ${ethers.formatEther(senderBalance)} ETH`);
+        throw new Error(
+          `Insufficient ETH balance. Needed: ${ethers.formatEther(value)} ETH, Has: ${ethers.formatEther(senderBalance)} ETH`
+        );
       }
-      
+
       const feeData = await this.provider.getFeeData();
       const txParams = {
         to: toAddress,
         value: value,
         gasLimit: options.gasLimit || await this.signer.estimateGas({ to: toAddress, value: value })
       };
-      
+
       if (feeData.maxFeePerGas && feeData.maxPriorityFeePerGas) {
         txParams.maxFeePerGas = options.maxFeePerGas || feeData.maxFeePerGas;
         txParams.maxPriorityFeePerGas = options.maxPriorityFeePerGas || feeData.maxPriorityFeePerGas;
       } else {
         txParams.gasPrice = options.gasPrice || feeData.gasPrice;
       }
-      
+
       console.log("Transaction parameters:", {
         value: ethers.formatEther(value),
         gasLimit: txParams.gasLimit.toString(),
@@ -73,15 +73,15 @@ class Account {
           gasPrice: `${ethers.formatUnits(txParams.gasPrice, "gwei")} gwei` 
         })
       });
-      
+
       const tx = await this.signer.sendTransaction(txParams);
       console.log(`Transaction hash: ${tx.hash}`);
-      
+
       const receipt = await tx.wait();
       console.log(`✅ Transaction confirmed in block: ${receipt.blockNumber}`);
       console.log(`Gas used: ${receipt.gasUsed.toString()}`);
       console.log(`Effective gas price: ${ethers.formatUnits(receipt.gasPrice, "gwei")} gwei`);
-      
+
       return receipt;
     } catch (error) {
       console.error("Error transferring native token:", error);
@@ -89,26 +89,33 @@ class Account {
     }
   }
 
+  // ---------- Singleton Factory ----------
   static async create(chain, address) {
-    let account;
-    
-    switch (chain.chainType) {
-      case Chain.CHAIN_TYPES.HARDHAT:
-        account = new HardhatAccount(address, chain);
-        break;
-      default:
-        account = new Account(address, chain);
+    Account.checkAccountAddress(address);
+
+    const key = `${chain.chainType}:${address.toLowerCase()}`;
+    if (!Account.instances.has(key)) {
+      let account;
+      switch (chain.chainType) {
+        case Chain.CHAIN_TYPES.HARDHAT:
+          account = new HardhatAccount(address, chain);
+          break;
+        default:
+          account = new Account(address, chain);
+      }
+      await account.init();
+      Account.instances.set(key, account);
     }
-    
-    await account.init();
-    return account;
+    return Account.instances.get(key);
   }
 }
+
+// storage for singleton instances
+Account.instances = new Map();
 
 class HardhatAccount extends Account {
   async init() {
     await super.init();
-    
     try {
       await this.provider.send("hardhat_impersonateAccount", [this.address]);
       this.signer = await this.chain.ethers.getSigner(this.address);
@@ -134,4 +141,4 @@ class HardhatAccount extends Account {
 
 Account.HardhatAccount = HardhatAccount;
 
-module.exports =  Account;
+module.exports = { Account };

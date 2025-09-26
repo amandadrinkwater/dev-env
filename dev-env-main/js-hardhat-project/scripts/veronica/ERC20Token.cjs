@@ -12,13 +12,13 @@ node ./scripts/veronica/ERC20Token.cjs transfer
 
 */
 
-const { ethers } = require("ethers");
+const { ethers, assert } = require("ethers");
 const abis = require("../utils/abis.cjs");
 
 const { Chain, CHAIN_TYPES } = require("./Chain.cjs");
 // const CHAIN_TYPES = Chain.CHAIN_TYPES;
 
-const Account = require("./Account.cjs");
+const { Account } = require("./Account.cjs");
 const addresses = require("../utils/addresses.cjs");
 
 const ERC20_ABI = abis.ERC20;
@@ -165,10 +165,21 @@ class ERC20Token {
   }
 
   static async create(tokenAddress, chain) {
-    const token = new ERC20Token(tokenAddress, chain);
-    await token.init();
-    return token;
+    const key = `${chain.chainType}:${ethers.getAddress(tokenAddress)}`;
+
+    if (!ERC20Token.instances.has(key)) {
+      const token = new ERC20Token(tokenAddress, chain);
+      await token.init();
+      ERC20Token.instances.set(key, token);
+    }
+
+    return ERC20Token.instances.get(key);
   }
+
+static async createMultiple(chain, tokenAddresses) {
+  return Promise.all(tokenAddresses.map(addr => ERC20Token.create(addr, chain)));
+}
+
 }
 
 async function example_allowance_approve() {
@@ -306,13 +317,13 @@ async function example_transfer() {
     // Create accounts
     const whaleAccount = await Account.create(chain, addresses.WHALES.USDC);
     const abbotAccount = await Account.create(chain, addresses.HARDHAT_ACCOUNTS.Abbot.address);
-    
+
     console.log('Whale Address:', whaleAccount.address);
     console.log('Whale ETH Balance:', await whaleAccount.getNativeBalance());
     
     // Initialize token
     const usdcToken = await ERC20Token.create(addresses.TOKENS.USDC, chain);
-    
+
     // Get balances before transfer
     console.log("\n=== BEFORE TRANSFER ===");
     const whaleBalanceBefore = await usdcToken.getBalance(whaleAccount);
@@ -353,6 +364,8 @@ process.on('SIGTERM', () => {
   console.log('💤 Gracefully shutting down from SIGTERM');
   process.exit(0);
 });
+
+ERC20Token.instances = new Map();
 
 module.exports = { ERC20Token, example_allowance_approve, example_transfer };
 

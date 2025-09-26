@@ -1,5 +1,3 @@
-
-
 /*
 
 ✅ Complete input validation for all methods
@@ -35,34 +33,34 @@ await Pool.demo.basicOperations();
 await Pool.demo.runAll();
 
 // Get a swap quote
-const quote = await pool.getSwapQuote("1", "ETH", 0.5);
+const quote = await pool.getSwapQuote("1", "WETH", "0.5");
 
 // Execute a swap
-const result = await pool.swap(account, "ETH", "1", { 
-  slippage: 0.5,
+const result = await pool.swap(account, "WETH", "1", { 
+  slippage: "0.5",
   recipient: "0x..." 
 });
 
 // Find optimal swap amount
-const optimal = await pool.getOptimalSwapAmount("ETH", 1.0);
+const optimal = await pool.getOptimalSwapAmount("WETH", "1.0");
 
 // All examples are practical and immediately usable:
 
 // 1. Basic trading
-const quote = await pool.getSwapQuote("1", "ETH", 0.5);
+const quote = await pool.getSwapQuote("1", "WETH", "0.5");
 
 // 2. Arbitrage detection
 const discrepancy = ethPrice * usdcPrice; // Should be ~1.0
 
 // 3. Large trade optimization
-const optimal = await pool.getOptimalSwapAmount("ETH", 0.5);
+const optimal = await pool.getOptimalSwapAmount("WETH", "0.5");
 
 // 4. Slippage tuning for different market conditions
-const aggressive = await pool.getSwapQuote("1", "ETH", 0.1);  // Low slippage
-const conservative = await pool.getSwapQuote("1", "ETH", 2.0); // High slippage
+const aggressive = await pool.getSwapQuote("1", "WETH", "0.1");  // Low slippage
+const conservative = await pool.getSwapQuote("1", "WETH", "2.0"); // High slippage
 */
 
-const { ethers } = require("ethers");
+const { ethers, assert } = require("ethers");
 const addresses = require("../utils/addresses.cjs");
 const abis = require("../utils/abis.cjs");
 const { ERC20Token } = require("./ERC20Token.cjs");
@@ -1004,11 +1002,22 @@ async getOptimalSwapAmount(tokenInSymbol, maxPriceImpact = 1.0) {
     return this.createFromTokens(tokenA, tokenB, chain, dexType);
   }
 
-  static async create(poolAddress, chain, dexType = DEX_TYPES.UNISWAP_V2) {
+ /* static async create(poolAddress, chain, dexType = DEX_TYPES.UNISWAP_V2) {
     const pool = new Pool(poolAddress, chain, dexType);
     await pool.init();
     return pool;
+  }*/
+
+  static create(chain, poolAddress, dexType = DEX_TYPES.UNISWAP_V2) {
+  const key = `${chain.chainType}:${dexType}:${ethers.getAddress(poolAddress)}`;
+  
+  if (!Pool.instances.has(key)) {
+    const pool = new Pool(poolAddress, chain, dexType);
+    Pool.instances.set(key, pool);
   }
+  
+  return Pool.instances.get(key);
+}
 
   /**
  * Create a Pool instance with pre-fetched data (optimized for batch operations)
@@ -1023,6 +1032,8 @@ async getOptimalSwapAmount(tokenInSymbol, maxPriceImpact = 1.0) {
  */
 /**
  * Create a Pool instance with pre-fetched data (optimized for batch operations)
+ * 
+ * not going to go into productin now, so not tested
  */
 static async createWithData(poolAddress, chain, token0Data, token1Data, reserves, dexType = DEX_TYPES.UNISWAP_V2) {
     try {
@@ -1099,9 +1110,40 @@ static async createWithData(poolAddress, chain, token0Data, token1Data, reserves
         console.error(`❌ Error creating pool with pre-fetched data for ${poolAddress}:`, error);
         throw error;
     }
-}/**
+}
+
+/**
+   * Create or retrieve multiple pools at once (singleton-aware)
+   * @param {Object} chain - Chain instance
+   * @param {Array<{address: string, dexType?: string}>} poolData - Array of pool info
+   * @returns {Pool[]} Array of Pool instances
+   * 
+   * // Array of pool info
+const poolData = [
+  { address: "0xPoolAddress1", dexType: DEX_TYPES.UNISWAP_V2 },
+  { address: "0xPoolAddress2", dexType: DEX_TYPES.UNISWAP_V2 },
+  { address: "0xPoolAddress1", dexType: DEX_TYPES.SUSHISWAP }
+];
+
+// Create all pools in one line using map
+const pools = poolData.map(d => Pool.create(chain, d.address, d.dexType));
+
+// Singleton check
+console.log(pools[0] === Pool.create(chain, "0xPoolAddress1", DEX_TYPES.UNISWAP_V2)); // true
+console.log(pools[2] === Pool.create(chain, "0xPoolAddress1", DEX_TYPES.SUSHISWAP));   // true
+
+console.log(pools.length); // 3
+   */
+  static createMultiple(chain, poolData) {
+    return poolData.map(d => Pool.create(chain, d.address, d.dexType));
+  }
+
+/**
  * Create multiple pools efficiently with batch data
  * Dramatically reduces RPC calls compared to individual Pool.create() calls
+ * 
+ * not going to go into productin now, so not tested
+ * 
  * @param {Array} poolDataArray - Array of pool data objects
  * @param {Object} chain - Chain instance
  * @param {string} dexType - DEX type
@@ -1236,21 +1278,20 @@ async function demoBasicPoolOperations() {
     console.log("🚀 Starting Pool Demo - Basic Operations\n");
     
     // Note: In real usage, you'd get these from your environment
-    const provider = new ethers.JsonRpcProvider(process.env.RPC_URL || "http://localhost:8545");
-    const chain = { provider, chainId: 1 };
-    
+    const hre = require("hardhat");
+    const { ethers } = hre;
+    const { Chain } = require("./Chain.cjs")
+
+    const chain = await Chain.create(ethers);
     // Example: USDC-ETH pool on Uniswap V2
-    const USDC_ETH_POOL = "0xB4e16d0168e52d35CaCD2c6185b44281Ec28C9Dc";
+    const USDC_WETH_POOL = addresses.POOLS.UNIV2_WETH_USDC;
     
-    const pool = await Pool.create(USDC_ETH_POOL, chain, Pool.DEX_TYPES.UNISWAP_V2);
+    const pool = await Pool.create(USDC_WETH_POOL, chain, Pool.DEX_TYPES.UNISWAP_V2);
     
     // Get pool information
     const poolInfo = await pool.getPoolInfo();
     console.log("📊 Pool Information:");
-    // Handle BigInt serialization
-    console.log(JSON.stringify(poolInfo, (key, value) =>
-      typeof value === 'bigint' ? value.toString() : value
-    , 2));
+    console.log("Pool Address:", poolInfo.address);
     
     // Get current price
     const price = await pool.getPriceQuick("WETH");
@@ -1284,11 +1325,14 @@ async function demoLiquidityManagement() {
   try {
     console.log("\n🌊 Starting Pool Demo - Liquidity Management\n");
     
-    const provider = new ethers.JsonRpcProvider(process.env.RPC_URL || "http://localhost:8545");
-    const chain = { provider, chainId: 1 };
+    const hre = require("hardhat");
+    const { ethers } = hre;
+    const { Chain } = require("./Chain.cjs")
+
+    const chain = await Chain.create(ethers);
     
-    const USDC_ETH_POOL = "0xB4e16d0168e52d35CaCD2c6185b44281Ec28C9Dc";
-    const pool = await Pool.create(USDC_ETH_POOL, chain, Pool.DEX_TYPES.UNISWAP_V2);
+    const USDC_WETH_POOL = addresses.POOLS.UNIV2_WETH_USDC;
+    const pool = await Pool.create(USDC_WETH_POOL, chain, Pool.DEX_TYPES.UNISWAP_V2);
     
     // Simulate liquidity position check (without actual account)
     console.log("📈 Liquidity Position Simulation:");
@@ -1322,12 +1366,15 @@ async function demoPoolCreationFromTokens() {
   try {
     console.log("\n🏭 Starting Pool Demo - Creation from Tokens\n");
     
-    const provider = new ethers.JsonRpcProvider(process.env.RPC_URL || "http://localhost:8545");
-    const chain = { provider, chainId: 1 };
+    const hre = require("hardhat");
+    const { ethers } = hre;
+    const { Chain } = require("./Chain.cjs")
+
+    const chain = await Chain.create(ethers);
     
     // Example token addresses (Mainnet)
-    const USDC_ADDRESS = "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48";
-    const DAI_ADDRESS = "0x6B175474E89094C44Da98b954EedeAC495271d0F";
+    const USDC_ADDRESS = addresses.TOKENS.USDC;
+    const DAI_ADDRESS = addresses.TOKENS.DAI;
     
     // Create token instances
     const usdc = await ERC20Token.create(USDC_ADDRESS, chain);
@@ -1369,17 +1416,20 @@ async function demoAdvancedPoolFeatures() {
   try {
     console.log("\n🔬 Starting Pool Demo - Advanced Features\n");
     
-    const provider = new ethers.JsonRpcProvider(process.env.RPC_URL || "http://localhost:8545");
-    const chain = { provider, chainId: 1 };
+    const hre = require("hardhat");
+    const { ethers } = hre;
+    const { Chain } = require("./Chain.cjs")
+
+    const chain = await Chain.create(ethers);
     
-    const USDC_ETH_POOL = "0xB4e16d0168e52d35CaCD2c6185b44281Ec28C9Dc";
-    const pool = await Pool.create(USDC_ETH_POOL, chain, Pool.DEX_TYPES.UNISWAP_V2);
+    const USDC_WETH_POOL = addresses.POOLS.UNIV2_WETH_USDC;
+    const pool = await Pool.create(USDC_WETH_POOL, chain, Pool.DEX_TYPES.UNISWAP_V2);
     
     // Test token detection
     const tokens = pool.getTokens();
     console.log("🎯 Token Detection Tests:");
     console.log(`Pool contains ${tokens.token0.symbol}: ${pool.hasToken(tokens.token0.address)}`);
-    console.log(`Pool contains ${tokens.token1.symbol}: ${pool.hasToken(tokens.token1.symbol)}`);
+    console.log(`Pool contains ${tokens.token1.symbol}: ${pool.hasToken(tokens.token1.address)}`);
     
     // Test other token retrieval
     const otherToken = pool.getOtherToken(tokens.token0.address);
@@ -1414,11 +1464,15 @@ async function demoSwapFunctionality() {
   try {
     console.log("\n🔄 Starting Pool Demo - Swap Functionality\n");
     
-    const provider = new ethers.JsonRpcProvider(process.env.RPC_URL || "http://localhost:8545");
-    const chain = { provider, chainId: 1 };
+    const hre = require("hardhat");
+
+    const { ethers } = hre;
+    const { Chain } = require("./Chain.cjs")
+
+    const chain = await Chain.create(ethers);
     
-    const USDC_ETH_POOL = "0xB4e16d0168e52d35CaCD2c6185b44281Ec28C9Dc";
-    const pool = await Pool.create(USDC_ETH_POOL, chain, Pool.DEX_TYPES.UNISWAP_V2);
+    const USDC_WETH_POOL = addresses.POOLS.UNIV2_WETH_USDC;
+    const pool = await Pool.create(USDC_WETH_POOL, chain, Pool.DEX_TYPES.UNISWAP_V2);
     
     console.log("💰 Pool Overview:");
     const poolInfo = await pool.getPoolInfo();
@@ -1430,8 +1484,8 @@ async function demoSwapFunctionality() {
     console.log("=".repeat(40));
     
     // Exact input quote
-    const exactInputQuote = await pool.getSwapQuote("1", "ETH", 0.5);
-    console.log("📊 Exact Input Quote (1 ETH → USDC):");
+    const exactInputQuote = await pool.getSwapQuote("1", "WETH", "0.5");
+    console.log("📊 Exact Input Quote (1 WETH → USDC):");
     console.log(`   Input: ${exactInputQuote.input.amount} ${exactInputQuote.input.symbol}`);
     console.log(`   Output: ${exactInputQuote.output.amount} ${exactInputQuote.output.symbol}`);
     console.log(`   Minimum Received: ${exactInputQuote.output.amountMin} ${exactInputQuote.output.symbol}`);
@@ -1450,14 +1504,14 @@ async function demoSwapFunctionality() {
     console.log("\n2. 📉 PRICE IMPACT ANALYSIS");
     console.log("=".repeat(40));
     
-    const smallSwap = await pool.getSwapQuote("0.1", "ETH", 0.5);
-    const mediumSwap = await pool.getSwapQuote("10", "ETH", 0.5);
+    const smallSwap = await pool.getSwapQuote("0.1", "WETH", "0.5");
+    const mediumSwap = await pool.getSwapQuote("10", "WETH", "0.5");
     
-    console.log("Small swap (0.1 ETH):");
+    console.log("Small swap (0.1 WETH):");
     console.log(`   Price Impact: ${smallSwap.priceImpact}`);
     console.log(`   Output: ${smallSwap.output.amount} ${smallSwap.output.symbol}`);
     
-    console.log("\nMedium swap (10 ETH):");
+    console.log("\nMedium swap (10 WETH):");
     console.log(`   Price Impact: ${mediumSwap.priceImpact}`);
     console.log(`   Output: ${mediumSwap.output.amount} ${mediumSwap.output.symbol}`);
     console.log("💡 Notice how larger swaps have higher price impact!");
@@ -1466,15 +1520,15 @@ async function demoSwapFunctionality() {
     console.log("\n3. 🎯 OPTIMAL SWAP CALCULATIONS");
     console.log("=".repeat(40));
     
-    const optimal1Percent = await pool.getOptimalSwapAmount("ETH", 1.0);
-    const optimal0_5Percent = await pool.getOptimalSwapAmount("ETH", 0.5);
+    const optimal1Percent = await pool.getOptimalSwapAmount("WETH", 1.0);
+    const optimal0_5Percent = await pool.getOptimalSwapAmount("WETH", 0.5);
     
     console.log("Optimal swap for <1% price impact:");
-    console.log(`   Amount: ${optimal1Percent.optimalAmount} ETH`);
+    console.log(`   Amount: ${optimal1Percent.optimalAmount} WETH`);
     console.log(`   Estimated Impact: ${optimal1Percent.estimatedPriceImpact}%`);
     
     console.log("\nOptimal swap for <0.5% price impact:");
-    console.log(`   Amount: ${optimal0_5Percent.optimalAmount} ETH`);
+    console.log(`   Amount: ${optimal0_5Percent.optimalAmount} WETH`);
     console.log(`   Estimated Impact: ${optimal0_5Percent.estimatedPriceImpact}%`);
     
     // Demo 4: Swap Route Simulation
@@ -1487,8 +1541,8 @@ async function demoSwapFunctionality() {
     console.log(`   Route 2: ${tokens.token1.symbol} → ${tokens.token0.symbol}`);
     
     // Test both directions
-    const route1Quote = await pool.getSwapQuote("1", tokens.token0.symbol, 0.5);
-    const route2Quote = await pool.getSwapQuote("1", tokens.token1.symbol, 0.5);
+    const route1Quote = await pool.getSwapQuote("1", tokens.token0.symbol, "0.5");
+    const route2Quote = await pool.getSwapQuote("1", tokens.token1.symbol, "0.5");
     
     console.log(`\n${tokens.token0.symbol} → ${tokens.token1.symbol}:`);
     console.log(`   1 ${tokens.token0.symbol} = ${route1Quote.output.amount} ${tokens.token1.symbol}`);
@@ -1501,15 +1555,15 @@ async function demoSwapFunctionality() {
     console.log("=".repeat(40));
     
     console.log("Scenario 1: Small Trade (Minimal Slippage)");
-    const smallTrade = await pool.getSwapQuote("0.01", "ETH", 0.1);
-    console.log(`   Input: 0.01 ETH`);
+    const smallTrade = await pool.getSwapQuote("0.01", "WETH", "0.1");
+    console.log(`   Input: 0.01 WETH`);
     console.log(`   Output: ~${smallTrade.output.amount} USDC`);
     console.log(`   Slippage: ${smallTrade.slippage}`);
     console.log(`   Price Impact: ${smallTrade.priceImpact}`);
     
     console.log("\nScenario 2: Large Trade (Significant Slippage)");
-    const largeTrade = await pool.getSwapQuote("50", "ETH", 2.0);
-    console.log(`   Input: 50 ETH`);
+    const largeTrade = await pool.getSwapQuote("50", "WETH", "2.0");
+    console.log(`   Input: 50 WETH`);
     console.log(`   Output: ~${largeTrade.output.amount} USDC`);
     console.log(`   Slippage: ${largeTrade.slippage}`);
     console.log(`   Price Impact: ${largeTrade.priceImpact}`);
@@ -1522,22 +1576,22 @@ async function demoSwapFunctionality() {
     console.log("📋 Swap Execution Code Examples:");
     console.log(`
 // Exact Input Swap (Most Common)
-await pool.swapExactTokensForTokens(account, "1", "ETH", {
-  slippage: 0.5,
+await pool.swapExactTokensForTokens(account, "1", "WETH", {
+  slippage: "0.5",
   recipient: account.address,
   deadline: Math.floor(Date.now() / 1000) + 300
 });
 
 // Exact Output Swap (When you need specific amount)
 await pool.swapTokensForExactTokens(account, "1000", "USDC", {
-  slippage: 1.0,
+  slippage: "1.0",
   recipient: account.address,
   deadline: Math.floor(Date.now() / 1000) + 300
 });
 
 // Generic Swap (Flexible)
 await pool.swap(account, ethToken, "1", {
-  slippage: 0.5,
+  slippage: "0.5",
   recipient: "0xReceiverAddress"
 });
     `);
@@ -1586,11 +1640,20 @@ async function demoAdvancedSwapStrategies() {
   try {
     console.log("\n🎯 Starting Pool Demo - Advanced Swap Strategies\n");
     
+    /*
     const provider = new ethers.JsonRpcProvider(process.env.RPC_URL || "http://localhost:8545");
     const chain = { provider, chainId: 1 };
-    
-    const USDC_ETH_POOL = "0xB4e16d0168e52d35CaCD2c6185b44281Ec28C9Dc";
-    const pool = await Pool.create(USDC_ETH_POOL, chain, Pool.DEX_TYPES.UNISWAP_V2);
+    */
+
+    const hre = require("hardhat");
+
+    const { ethers } = hre;
+    const { Chain } = require("./Chain.cjs")
+
+    const chain = await Chain.create(ethers);
+
+    const USDC_WETH_POOL = addresses.POOLS.UNIV2_WETH_USDC;
+    const pool = await Pool.create(USDC_WETH_POOL, chain, Pool.DEX_TYPES.UNISWAP_V2);
     
     console.log("1. 🔄 ARBITRAGE DETECTION");
     console.log("=".repeat(40));
@@ -1624,7 +1687,7 @@ async function demoAdvancedSwapStrategies() {
     console.log("Slippage vs Minimum Output:");
     
     for (const slippage of slippageTests) {
-      const quote = await pool.getSwapQuote("1", "ETH", slippage);
+      const quote = await pool.getSwapQuote("1", "WETH", slippage);
       console.log(`   ${slippage}% slippage: ${quote.output.amountMin} USDC min`);
     }
     
@@ -1656,14 +1719,14 @@ async function demoAdvancedSwapStrategies() {
     console.log("For large swaps, consider splitting into multiple transactions:");
     
     const largeAmount = "10";
-    const optimal = await pool.getOptimalSwapAmount("ETH", 0.5);
+    const optimal = await pool.getOptimalSwapAmount("WETH", 0.5);
     const optimalPerTrade = parseFloat(optimal.optimalAmount);
     const largeAmountNum = parseFloat(largeAmount);
     
     if (optimalPerTrade > 0 && largeAmountNum > optimalPerTrade) {
       const numTrades = Math.ceil(largeAmountNum / optimalPerTrade);
-      console.log(`   Large swap: ${largeAmount} ETH`);
-      console.log(`   Optimal per trade: ${optimalPerTrade} ETH`);
+      console.log(`   Large swap: ${largeAmount} WETH`);
+      console.log(`   Optimal per trade: ${optimalPerTrade} WETH`);
       console.log(`   Recommended: Split into ${numTrades} trades`);
       console.log(`   Estimated total improvement: ~${((numTrades - 1) * 0.5).toFixed(1)}% better price`);
     }
@@ -1759,4 +1822,6 @@ if (require.main === module) {
   });
 }
 
-module.exports = Pool;
+Pool.instances = new Map(); 
+
+module.exports = { Pool };

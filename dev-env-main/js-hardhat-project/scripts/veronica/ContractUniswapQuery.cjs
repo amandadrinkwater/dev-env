@@ -1,9 +1,11 @@
-const { ethers } = require("ethers");
+const { ethers, assert } = require("ethers");
 const addresses = require("../utils/addresses.cjs");
 const abis = require("../utils/abis.cjs");
 const { ERC20Token } = require("./ERC20Token.cjs");
 const contracts = require("../utils/contracts.cjs");
 const Pool = require("./Pool.cjs"); // Import the Pool class
+const { Chain } = require("./Chain.cjs");
+
 
 class ContractUniswapQuery {
     // make it singleton 
@@ -21,8 +23,9 @@ class ContractUniswapQuery {
         ContractUniswapQuery.instance = this;
     }
 
-    static getInstance(chain) {
+    static async getInstance(_ethers) {
         if (!ContractUniswapQuery.instance) {
+            const chain = await Chain.create(_ethers);            
             ContractUniswapQuery.instance = new ContractUniswapQuery(chain);
         }
         return ContractUniswapQuery.instance;
@@ -514,12 +517,9 @@ async function main() {
     const hre = require("hardhat");
     const { ethers } = hre;
     
-    const { Chain } = require("../veronica/Chain.cjs");
-    const chain = await Chain.create(ethers);
-
     // Get singleton instance
-    const uniswapQuery = ContractUniswapQuery.getInstance(chain);
-   
+    const uniswapQuery = await ContractUniswapQuery.getInstance(ethers);
+    
     // Example 1: Compare performance
     console.log("\n1. 📊 PERFORMANCE COMPARISON");
     await uniswapQuery.comparePerformance(0, 2);

@@ -50,3 +50,13 @@ refatorar nomes de funcoes
 chain is coupled with all objects, we may decouple and take info functions to become static... to give the state at some point in time
 
 we may create a "ethers" object for production that changes over blocks and another for "frozen" state for inquiries at a specific block and chain
+
+on Contract Uniswap, in getPoolsByIndexRangeWithOptions change minLiquidityUSD to use all coins
+
+getPoolsByIndexRangeSmart refactor
+
+const uniswapQuery = ContractUniswapQuery.getInstance(chain); -> mudar para ethers
+
+serah que token estah como singleton?
+
+serah que pool virou singleton?
