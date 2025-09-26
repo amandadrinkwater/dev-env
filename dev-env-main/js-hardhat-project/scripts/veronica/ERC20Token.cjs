@@ -29,6 +29,7 @@ class ERC20Token {
     if (!chain) throw new Error("Chain instance is required");
     
     this.tokenAddress = tokenAddress;
+    this.address = tokenAddress;  // Add this line to fix Pool.cjs compatibility
     this.chain = chain;
     this.provider = chain.provider;
     this.contract = new ethers.Contract(tokenAddress, ERC20_ABI, chain.provider);

@@ -186,61 +186,34 @@ class Pool {
 }
 
   async _loadPoolData() {
-    try {
-      // Get token addresses with error handling
-      const [token0Address, token1Address] = await Promise.all([
-        this.contract.token0().catch(() => { 
-          throw new Error("Failed to get token0 address from pool contract"); 
-        }),
-        this.contract.token1().catch(() => { 
-          throw new Error("Failed to get token1 address from pool contract"); 
-        })
-      ]);
+  try {
+    // Get token addresses
+    const [token0Address, token1Address] = await Promise.all([
+      this.contract.token0(),
+      this.contract.token1()
+    ]);
 
-      // Validate token addresses
-      if (!token0Address || token0Address === ethers.ZeroAddress) {
-        throw new Error("Invalid token0 address from pool");
-      }
-      if (!token1Address || token1Address === ethers.ZeroAddress) {
-        throw new Error("Invalid token1 address from pool");
-      }
+    // Always create new token instances
+    this.token0 = await ERC20Token.create(token0Address, this.chain);
+    this.token1 = await ERC20Token.create(token1Address, this.chain);
 
-      // Use existing token objects if they match, otherwise create new ones
-      if (this.tokenA && this._isSameAddress(this.tokenA.address, token0Address)) {
-        this.token0 = this.tokenA;
-      } else if (this.tokenA && this._isSameAddress(this.tokenA.address, token1Address)) {
-        this.token0 = this.tokenA;
-      } else {
-        this.token0 = await ERC20Token.create(token0Address, this.chain);
-      }
+    // Get reserves
+    const reserves = await this.contract.getReserves();
+    this.reserve0 = reserves[0];
+    this.reserve1 = reserves[1];
 
-      if (this.tokenB && this._isSameAddress(this.tokenB.address, token1Address)) {
-        this.token1 = this.tokenB;
-      } else if (this.tokenB && this._isSameAddress(this.tokenB.address, token0Address)) {
-        this.token1 = this.tokenB;
-      } else {
-        this.token1 = await ERC20Token.create(token1Address, this.chain);
-      }
+    // Get total supply
+    this.totalSupply = await this.contract.totalSupply();
 
-      // Get reserves with error handling
-      const reserves = await this.contract.getReserves().catch(() => {
-        throw new Error("Failed to get reserves from pool contract");
-      });
-      
-      this.reserve0 = reserves[0];
-      this.reserve1 = reserves[1];
+    console.log("✅ Pool data loaded successfully");
+    console.log(`Token0: ${this.token0.address} (${this.token0.symbol})`);
+    console.log(`Token1: ${this.token1.address} (${this.token1.symbol})`);
 
-      // Get total supply
-      this.totalSupply = await this.contract.totalSupply().catch(() => {
-        throw new Error("Failed to get total supply from pool contract");
-      });
-
-    } catch (error) {
-      console.error("Error loading pool data for pool:", this.poolAddress, error);
-      throw error;
-    }
+  } catch (error) {
+    console.error("Error loading pool data:", error);
+    throw error;
   }
-
+}
   setSlippageTolerance(slippage) {
     if (typeof slippage !== 'number' || slippage < 0 || slippage > 100) {
       throw new Error("Slippage tolerance must be a number between 0 and 100");
@@ -1274,10 +1247,13 @@ async function demoBasicPoolOperations() {
     // Get pool information
     const poolInfo = await pool.getPoolInfo();
     console.log("📊 Pool Information:");
-    console.log(JSON.stringify(poolInfo, null, 2));
+    // Handle BigInt serialization
+    console.log(JSON.stringify(poolInfo, (key, value) =>
+      typeof value === 'bigint' ? value.toString() : value
+    , 2));
     
     // Get current price
-    const price = await pool.getPriceQuick("ETH");
+    const price = await pool.getPriceQuick("WETH");
     console.log("\n💹 Current Price:");
     console.log(price.formatted);
     console.log(price.invertedFormatted);
@@ -1323,7 +1299,7 @@ async function demoLiquidityManagement() {
     
     // Show how to calculate optimal liquidity amounts
     const reserves = await pool.getReserves();
-    const price = await pool.getPriceQuick("ETH");
+    const price = await pool.getPriceQuick("WETH");
     
     console.log(`\n💡 Liquidity Provision Tips:`);
     console.log(`- Current price: ${price.formatted}`);
@@ -1417,7 +1393,7 @@ async function demoAdvancedPoolFeatures() {
     
     // Test price impact calculation simulation
     console.log("\n📉 Price Impact Simulation:");
-    const smallTrade = await pool.getPriceQuick("ETH");
+    const smallTrade = await pool.getPriceQuick("WETH");
     console.log(`Current price: ${smallTrade.formatted}`);
     console.log("Large trades would show price impact due to slippage");
     
@@ -1620,7 +1596,7 @@ async function demoAdvancedSwapStrategies() {
     console.log("=".repeat(40));
     
     // Calculate implied prices from both directions
-    const ethToUsdc = await pool.getPriceQuick("ETH");
+    const ethToUsdc = await pool.getPriceQuick("WETH");
     const usdcToEth = await pool.getPriceQuick("USDC");
     
     console.log("Market Prices:");
