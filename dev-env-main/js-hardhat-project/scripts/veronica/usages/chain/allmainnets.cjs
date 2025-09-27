@@ -1,7 +1,7 @@
 const { Chain, CHAIN_TYPES } = require("../../Chain.cjs");
 
 async function testMainnetChains() {
-  try {
+  
     // 1. Ethereum Mainnet with Infura
     console.log("=== Ethereum Mainnet ===");
     const ethereumChain = await Chain.createEthereumMainnet({
