@@ -57,6 +57,15 @@ getPoolsByIndexRangeSmart refactor
 
 const uniswapQuery = ContractUniswapQuery.getInstance(chain); -> mudar para ethers
 
-serah que token estah como singleton?
 
-serah que pool virou singleton?
+put proper keys for chains...
+
+put predefined chains to work, "create" create functions for each predefined function
+
+estou usando Deep para redefinir as classes account e chain
+
+terminar testes em chain, lers as observacoes acima e depois refatorar Account, 
+
+se der tempo refatorar as outras classes para soh receber chain, ou criar chain em funcao do argumento apropriado...
+
+mencionar que soh roda em ethers v6 na documentacao das funcoes

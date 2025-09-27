@@ -3,9 +3,9 @@
 const hre = require("hardhat");
 const { ethers } = hre;
 
-const addresses = require("../utils/addresses.cjs");
-const abis = require("../utils/abis.cjs");
-const ERC20Token = require("./ERC20Token.cjs");
+const addresses = require("../../utils/addresses.cjs");
+const abis = require("../../utils/abis.cjs");
+const ERC20Token = require("../ERC20Token.cjs");
 
 const ERC20_ABI = abis.ERC20;
 

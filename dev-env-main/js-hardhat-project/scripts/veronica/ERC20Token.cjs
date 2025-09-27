@@ -191,12 +191,18 @@ async function example_allowance_approve() {
     const { ethers } = hre;
     
     // Initialize chain and accounts
-    const chain = await Chain.create(ethers, CHAIN_TYPES.HARDHAT);
+    //const chain = await Chain.create(ethers, CHAIN_TYPES.HARDHAT);
     
+    /*
     const whaleAccount = await Account.create(chain, addresses.WHALES.USDC);
     const abbotAccount = await Account.create(chain, addresses.HARDHAT_ACCOUNTS.Abbot.address);
     const bakerAccount = await Account.create(chain, addresses.HARDHAT_ACCOUNTS.Baker.address);
-    
+    */
+
+    const whaleAccount = Account.PREDEFINED_ACCOUNTS.WhaleUSDC
+    const abbotAccount = Account.PREDEFINED_ACCOUNTS.Abbot
+    const bakerAccount = Account.PREDEFINED_ACCOUNTS.Baker
+
     console.log('📋 Account Information:');
     console.log('Whale Address:', whaleAccount.address);
     console.log('Abbot Address:', abbotAccount.address);

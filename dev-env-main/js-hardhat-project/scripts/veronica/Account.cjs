@@ -98,7 +98,7 @@ class Account {
       let account;
       switch (chain.chainType) {
         case Chain.CHAIN_TYPES.HARDHAT:
-          account = new HardhatAccount(address, chain);
+          account = new ImpersonatedHardhatAccount(address, chain);
           break;
         default:
           account = new Account(address, chain);
@@ -110,35 +110,54 @@ class Account {
   }
 }
 
-// storage for singleton instances
-Account.instances = new Map();
-
 class HardhatAccount extends Account {
-  async init() {
+    async init() {
     await super.init();
-    try {
-      await this.provider.send("hardhat_impersonateAccount", [this.address]);
-      this.signer = await this.chain.ethers.getSigner(this.address);
-    } catch (error) {
-      console.error(`Error impersonating account ${this.address}:`, error);
-      throw error;
-    }
+    return this;
   }
-
+  
   async setBalance(amount) {
     try {
       await this.provider.send("hardhat_setBalance", [
         this.address,
         ethers.toBeHex(ethers.parseEther(amount.toString()))
       ]);
+
+      this.signer = await this.chain.ethers.getSigner(this.address);
+
       console.log(`Set balance of ${this.address} to ${amount} ETH`);
     } catch (error) {
       console.error(`Error setting balance for ${this.address}:`, error);
       throw error;
     }
   }
+
 }
 
-Account.HardhatAccount = HardhatAccount;
+class ImpersonatedHardhatAccount extends HardhatAccount {
+  async init() {
+    await super.init();
+    try {
+      await this.provider.send("hardhat_impersonateAccount", [this.address]);
+     
+    } catch (error) {
+      console.error(`Error impersonating account ${this.address}:`, error);
+      throw error;
+    }
+  }
+
+}
+
+Account.instances = new Map();
+
+PREDEFINED_ACCOUNTS = {
+  WhaleUSDC : await Account.create(Chain.chain_hardhat, addresses.WHALES.USDC),
+  Abbot : await Account.create(Chain.chain_hardhat, addresses.HARDHAT_ACCOUNTS.Abbot.address),
+  Costello : await Account.create(Chain.chain_hardhat, addresses.HARDHAT_ACCOUNTS.Costello.address),
+  Baker : await Account.create(Chain.chain_hardhat, addresses.HARDHAT_ACCOUNTS.Baker.address)
+      
+}
+
+Account.PREDEFINED_ACCOUNTS = PREDEFINED_ACCOUNTS
 
 module.exports = { Account };

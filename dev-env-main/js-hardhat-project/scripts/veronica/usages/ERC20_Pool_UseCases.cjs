@@ -1,9 +1,9 @@
 const { ethers } = require("hardhat");
-const Chain = require("./Chain.cjs");
-const Account = require("./Account.cjs");
-const ERC20Token = require("./ERC20Token.cjs");
-const Pool = require("./Pool.cjs");
-const addresses = require("../utils/addresses.cjs");
+const Chain = require("../Chain.cjs");
+const Account = require("../Account.cjs");
+const ERC20Token = require("../ERC20Token.cjs");
+const Pool = require("../Pool.cjs");
+const addresses = require("../../utils/addresses.cjs");
 
 const CHAIN_TYPES = {
   HARDHAT: 'hardhat',

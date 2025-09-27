@@ -16,8 +16,8 @@ Both actions are performed sequentially.
 const hre = require("hardhat");
 const { ethers } = hre;
 
-const addresses = require("../utils/addresses.cjs");
-const abis = require("../utils/abis.cjs");
+const addresses = require("../../utils/addresses.cjs");
+const abis = require("../../utils/abis.cjs");
 
 const USDC = addresses.TOKENS.USDC;
 const DAI = addresses.TOKENS.DAI;

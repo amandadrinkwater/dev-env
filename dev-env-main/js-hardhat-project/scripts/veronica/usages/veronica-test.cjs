@@ -1,5 +1,5 @@
 
-const { Pool } = require("./Pool.cjs")
+const { Pool } = require("../Pool.cjs")
 
 /*
 
