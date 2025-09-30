@@ -1,5 +1,7 @@
 const { ethers } = require("ethers");
 
+const { RPCs } = require("../utils/RPCs.cjs");
+
 const CHAIN_TYPES = {
   HARDHAT: 'hardhat',
   ETHEREUM_MAINNET: 'ethereum_mainnet',
@@ -13,12 +15,12 @@ const CHAIN_TYPES = {
 
 const CHAIN_CONFIGS = {
   [CHAIN_TYPES.ETHEREUM_MAINNET]: {
-    rpcUrl: process.env.ETHEREUM_RPC_URL || "https://mainnet.infura.io/v3/",
+    rpcUrl: process.env.ETHEREUM_RPC_URL || RPCs.mainnetInfura,
     chainId: 1,
     name: "Ethereum Mainnet"
   },
   [CHAIN_TYPES.ETHEREUM_SEPOLIA]: {
-    rpcUrl: process.env.ETHEREUM_SEPOLIA_RPC_URL || "https://sepolia.infura.io/v3/",
+    rpcUrl: process.env.ETHEREUM_SEPOLIA_RPC_URL || RPCs.sepoliaAlchemy,
     chainId: 11155111,
     name: "Ethereum Sepolia"
   },
@@ -27,10 +29,10 @@ const CHAIN_CONFIGS = {
     chainId: 137,
     name: "Polygon Mainnet"
   },
-  [CHAIN_TYPES.POLYGON_MUMBAI]: {
-    rpcUrl: process.env.POLYGON_MUMBAI_RPC_URL || "https://rpc-mumbai.matic.today",
-    chainId: 80001,
-    name: "Polygon Mumbai"
+   [CHAIN_TYPES.POLYGON_AMOY]: {
+    rpcUrl: process.env.POLYGON_AMOY_RPC_URL || "https://polygon-amoy.g.alchemy.com/v2/eJL1q2Fuwb94bHgnfERZxCNjP3AJKasH",
+    chainId: 80002,
+    name: "Polygon Amoy"
   },
   [CHAIN_TYPES.HARDHAT]: {
     rpcUrl: "http://localhost:8545",

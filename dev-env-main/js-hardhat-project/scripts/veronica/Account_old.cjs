@@ -1,6 +1,5 @@
 const { ethers } = require("ethers");
 const Chain = require("./Chain.cjs");
-const addresses = require("../utils/addresses.cjs");
 
 class Account {
   constructor(address, chain) {
@@ -12,9 +11,7 @@ class Account {
 
   async init() {
     try {
-      // Use the chain's ethers instance if available, otherwise use global ethers
-      const ethersInstance = this.chain.ethers || ethers;
-      this.signer = await ethersInstance.getSigner(this.address);
+      this.signer = await this.chain.ethers.getSigner(this.address);
       return this;
     } catch (error) {
       console.error(`Error initializing account ${this.address}:`, error);
@@ -25,6 +22,18 @@ class Account {
   static checkAccountAddress(address) {
     if (!ethers.isAddress(address)) {
       throw new Error(`Invalid Ethereum address: ${address}`);
+    }
+  }
+
+  async generateNewAddress() {
+    try {
+      const wallet = ethers.Wallet.createRandom();
+      console.log(`Generated new address: ${wallet.address}`);
+      return wallet.address;
+    } 
+    catch (error) {
+      console.error("Error generating new address:", error);
+      throw error;
     }
   }
 
@@ -97,12 +106,6 @@ class Account {
     Account.checkAccountAddress(address);
 
     const key = `${chain.chainType}:${address.toLowerCase()}`;
-    
-    // Initialize instances map if it doesn't exist
-    if (!Account.instances) {
-      Account.instances = new Map();
-    }
-    
     if (!Account.instances.has(key)) {
       let account;
       switch (chain.chainType) {
@@ -117,58 +120,10 @@ class Account {
     }
     return Account.instances.get(key);
   }
-
-  // Clear instances (useful for testing)
-  static clearInstances() {
-    if (Account.instances) {
-      Account.instances.clear();
-    }
-  }
-
-  // Get all cached instances (for debugging)
-  static getCachedInstances() {
-    return Account.instances ? Array.from(Account.instances.keys()) : [];
-  }
-
-  // Factory method for creating predefined accounts
-  static async createPredefined(chain, accountName) {
-    let address;
-    
-    switch(accountName) {
-      case 'WhaleUSDC':
-        address = addresses.WHALES.USDC;
-        break;
-      case 'Abbot':
-        address = addresses.HARDHAT_ACCOUNTS.Abbot.address;
-        break;
-      case 'Costello':
-        address = addresses.HARDHAT_ACCOUNTS.Costello.address;
-        break;
-      case 'Baker':
-        address = addresses.HARDHAT_ACCOUNTS.Baker.address;
-        break;
-      default:
-        throw new Error(`Unknown predefined account: ${accountName}`);
-    }
-    
-    return await Account.create(chain, address);
-  }
-
-  // Batch create predefined accounts
-  static async createPredefinedAccounts(chain) {
-    const accountNames = ['WhaleUSDC', 'Abbot', 'Costello', 'Baker'];
-    const accounts = {};
-    
-    for (const name of accountNames) {
-      accounts[name] = await Account.createPredefined(chain, name);
-    }
-    
-    return accounts;
-  }
 }
 
 class HardhatAccount extends Account {
-  async init() {
+    async init() {
     await super.init();
     return this;
   }
@@ -180,9 +135,7 @@ class HardhatAccount extends Account {
         ethers.toBeHex(ethers.parseEther(amount.toString()))
       ]);
 
-      // Refresh the signer after balance change
-      const ethersInstance = this.chain.ethers || ethers;
-      this.signer = await ethersInstance.getSigner(this.address);
+      this.signer = await this.chain.ethers.getSigner(this.address);
 
       console.log(`Set balance of ${this.address} to ${amount} ETH`);
     } catch (error) {
@@ -190,6 +143,7 @@ class HardhatAccount extends Account {
       throw error;
     }
   }
+
 }
 
 class ImpersonatedHardhatAccount extends HardhatAccount {
@@ -197,15 +151,25 @@ class ImpersonatedHardhatAccount extends HardhatAccount {
     await super.init();
     try {
       await this.provider.send("hardhat_impersonateAccount", [this.address]);
-      console.log(`Impersonated account: ${this.address}`);
+     
     } catch (error) {
       console.error(`Error impersonating account ${this.address}:`, error);
       throw error;
     }
   }
+
 }
 
-// Initialize instances map
 Account.instances = new Map();
+
+PREDEFINED_ACCOUNTS = {
+  WhaleUSDC : await Account.create(Chain.chain_hardhat, addresses.WHALES.USDC),
+  Abbot : await Account.create(Chain.chain_hardhat, addresses.HARDHAT_ACCOUNTS.Abbot.address),
+  Costello : await Account.create(Chain.chain_hardhat, addresses.HARDHAT_ACCOUNTS.Costello.address),
+  Baker : await Account.create(Chain.chain_hardhat, addresses.HARDHAT_ACCOUNTS.Baker.address)
+      
+}
+
+Account.PREDEFINED_ACCOUNTS = PREDEFINED_ACCOUNTS
 
 module.exports = { Account };

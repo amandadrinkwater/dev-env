@@ -71,3 +71,9 @@ se der tempo refatorar as outras classes para soh receber chain, ou criar chain 
 mencionar que soh roda em ethers v6 na documentacao das funcoes
 
 colocar minhas contas de acesso RPC...
+
+tabela com os dados de logaritmos
+
+comecar a baixar githubs preselecionados
+
+melhorar forma de apresentar o nome da rede, check test-chain.cjs
