@@ -317,8 +317,8 @@ async function example_transfer() {
     // You need to require hardhat to get ethers
     const hre = require("hardhat");
     const { ethers } = hre;
-    
-    const chain = await Chain.create(ethers, CHAIN_TYPES.HARDHAT);
+
+    const chain = await Chain.create(CHAIN_TYPES.HARDHAT);
     
     // Create accounts
     const whaleAccount = await Account.create(chain, addresses.WHALES.USDC);

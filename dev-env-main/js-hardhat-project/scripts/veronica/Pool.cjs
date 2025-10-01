@@ -1280,7 +1280,7 @@ async function demoBasicPoolOperations() {
     // Note: In real usage, you'd get these from your environment
     const hre = require("hardhat");
     const { ethers } = hre;
-    const { Chain } = require("./Chain.cjs")
+    const { Chain, CHAIN_TYPES } = require("./Chain.cjs")
 
     const chain = await Chain.create(ethers);
     // Example: USDC-ETH pool on Uniswap V2
@@ -1650,7 +1650,9 @@ async function demoAdvancedSwapStrategies() {
     const { ethers } = hre;
     const { Chain } = require("./Chain.cjs")
 
-    const chain = await Chain.create(ethers);
+    //  const chain = await Chain.create(ethers);
+
+    const chain = await Chain.createHardhat();
 
     const USDC_WETH_POOL = addresses.POOLS.UNIV2_WETH_USDC;
     const pool = await Pool.create(USDC_WETH_POOL, chain, Pool.DEX_TYPES.UNISWAP_V2);

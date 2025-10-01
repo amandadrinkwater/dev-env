@@ -14,27 +14,27 @@ const CHAIN_TYPES = {
 };
 
 const CHAIN_CONFIGS = {
-  [CHAIN_TYPES.ETHEREUM_MAINNET]: {
+  ETHEREUM_MAINNET: {
     rpcUrl: process.env.ETHEREUM_RPC_URL || RPCs.mainnetInfura,
     chainId: 1,
     name: "Ethereum Mainnet"
   },
-  [CHAIN_TYPES.ETHEREUM_SEPOLIA]: {
+  ETHEREUM_SEPOLIA: {
     rpcUrl: process.env.ETHEREUM_SEPOLIA_RPC_URL || RPCs.sepoliaAlchemy,
     chainId: 11155111,
     name: "Ethereum Sepolia"
   },
-  [CHAIN_TYPES.POLYGON_MAINNET]: {
+  POLYGON_MAINNET: {
     rpcUrl: process.env.POLYGON_RPC_URL || "https://polygon-rpc.com",
     chainId: 137,
     name: "Polygon Mainnet"
   },
-   [CHAIN_TYPES.POLYGON_AMOY]: {
+  POLYGON_AMOY: {
     rpcUrl: process.env.POLYGON_AMOY_RPC_URL || "https://polygon-amoy.g.alchemy.com/v2/eJL1q2Fuwb94bHgnfERZxCNjP3AJKasH",
     chainId: 80002,
     name: "Polygon Amoy"
   },
-  [CHAIN_TYPES.HARDHAT]: {
+  HARDHAT: {
     rpcUrl: "http://localhost:8545",
     chainId: 31337,
     name: "Hardhat Network"
@@ -46,7 +46,7 @@ class Chain {
     this.provider = provider;
     this.chainType = chainType;
     this.network = null;
-    this.config = CHAIN_CONFIGS[chainType] || null;
+    this.instance = null;
   }
 
   async init() {
@@ -117,36 +117,50 @@ class Chain {
   }
 
   // Factory method to create chain instances
-  static async create(chainType, options = {}) {
+  static async create(chainType, options = {}) { // get Instance
     let provider;
     
     switch(chainType) {
       case CHAIN_TYPES.HARDHAT:
         // Try to use Hardhat's provider if available
-        try {
-          const hardhat = require("hardhat");
-          provider = hardhat.ethers.provider;
-        } catch (error) {
-          console.log("Hardhat not available, using default provider");
-          const config = CHAIN_CONFIGS[chainType];
-          provider = new ethers.JsonRpcProvider(config.rpcUrl);
-        }
+        const hardhat = require("hardhat");
+        provider = hardhat.ethers.provider;
+        
         break;
         
-      default:
+      /*default:
         const config = CHAIN_CONFIGS[chainType];
+        console.log(chainType)
         if (!config) {
           throw new Error(`Unknown chain type: ${chainType}`);
         }
         
         const rpcUrl = options.rpcUrl || config.rpcUrl;
         const finalRpcUrl = options.apiKey ? `${rpcUrl}${options.apiKey}` : rpcUrl;
-        provider = new ethers.JsonRpcProvider(finalRpcUrl);
+        provider = new ethers.JsonRpcProvider(finalRpcUrl);*/
+
     }
 
     const chain = new Chain(provider, chainType);
     await chain.init();
     return chain;
+  }
+
+  static async create(chainType) {
+    if (!Chain.instance) {
+        if (chainType === CHAIN_TYPES.HARDHAT) {
+           // Try to use Hardhat's provider if available
+            const hardhat = require("hardhat");
+            provider = hardhat.ethers.provider;
+            
+            const chain = await Chain.create(_ethers);            
+            Chain.instance = chain
+        } else {
+            const chain = await Chain.create(ethers);            
+            Chain.instance = chain
+        }
+
+    return Chain.instance;
   }
 
   static async createHardhat() {
