@@ -1,0 +1,192 @@
+
+const { RPCs } = require("../utils/RPCs.cjs");
+
+
+const CHAIN_CONFIGS = {
+  ETHEREUM_MAINNET: {
+    rpcUrl: process.env.ETHEREUM_RPC_URL || RPCs.mainnetInfura,
+    chainId: 1,
+    name: "Ethereum Mainnet"
+  },
+  ETHEREUM_SEPOLIA: {
+    rpcUrl: process.env.ETHEREUM_SEPOLIA_RPC_URL || RPCs.sepoliaAlchemy,
+    chainId: 11155111,
+    name: "Ethereum Sepolia"
+  },
+  /*POLYGON_MAINNET: {
+    rpcUrl: process.env.POLYGON_RPC_URL || "https://polygon-rpc.com",
+    chainId: 137,
+    name: "Polygon Mainnet"
+  },
+  POLYGON_AMOY: {
+    rpcUrl: process.env.POLYGON_AMOY_RPC_URL || "https://polygon-amoy.g.alchemy.com/v2/eJL1q2Fuwb94bHgnfERZxCNjP3AJKasH",
+    chainId: 80002,
+    name: "Polygon Amoy"
+  }, */
+  HARDHAT: {
+    rpcUrl: "http://localhost:8545",
+    chainId: 31337,
+    name: "Hardhat Network"
+  }
+};
+
+class Chain {
+  constructor(provider, chainConfig = CHAIN_CONFIGS.HARDHAT) {
+    this.provider = provider;
+    this.chainType = chainConfig;
+    this.network = null;
+    this.instance = null;
+  }
+
+  async init() {
+    this.network = await this.provider.getNetwork();
+    if (this.config && this.network.chainId !== BigInt(this.config.chainId)) {
+      console.warn(`Chain ID mismatch: expected ${this.config.chainId}, got ${this.network.chainId}`);
+    }
+  }
+
+  async getChainActualStatus() {  
+    try {
+      const network = await this.provider.getNetwork();
+      const blockNumber = await this.provider.getBlockNumber();
+      const feeData = await this.provider.getFeeData();
+      
+      // Use gasPrice if available, otherwise use maxFeePerGas for EIP-1559 chains
+      const gasPrice = feeData.gasPrice || feeData.maxFeePerGas;
+      
+      return {
+        network, 
+        blockNumber, 
+        gasPrice: gasPrice ? `${ethers.formatUnits(gasPrice, "gwei")} gwei` : 'Unknown',
+        gasPriceWei: gasPrice ? gasPrice.toString() : 'Unknown',
+        baseFeePerGas: feeData.lastBaseFeePerGas ? `${ethers.formatUnits(feeData.lastBaseFeePerGas, "gwei")} gwei` : undefined,
+        maxFeePerGas: feeData.maxFeePerGas ? `${ethers.formatUnits(feeData.maxFeePerGas, "gwei")} gwei` : undefined,
+        maxPriorityFeePerGas: feeData.maxPriorityFeePerGas ? `${ethers.formatUnits(feeData.maxPriorityFeePerGas, "gwei")} gwei` : undefined
+      };
+    } catch (error) {
+      console.error("Error fetching chain status:", error);
+      throw error;
+    }
+  }
+
+  async printToConsole() {
+    console.log(`\n=== Chain Status ===`);  
+    const status = await this.getChainActualStatus();
+    console.log("Network:", status.network.name);
+    console.log("Chain ID:", status.network.chainId);
+    console.log("Latest Block Number:", status.blockNumber);
+    console.log("Gas Price:", status.gasPrice);
+    
+    if (status.baseFeePerGas) {
+      console.log("Base Fee Per Gas:", status.baseFeePerGas);
+    }
+    if (status.maxFeePerGas) {
+      console.log("Max Fee Per Gas:", status.maxFeePerGas);
+    }
+    if (status.maxPriorityFeePerGas) {
+      console.log("Max Priority Fee Per Gas:", status.maxPriorityFeePerGas);
+    }
+    console.log(`====================\n`);
+  }
+
+  async getGasInfo() {
+    try {
+      const feeData = await this.provider.getFeeData();
+      
+      return {
+        gasPrice: feeData.gasPrice ? `${ethers.formatUnits(feeData.gasPrice, "gwei")} gwei` : undefined,
+        baseFeePerGas: feeData.lastBaseFeePerGas ? `${ethers.formatUnits(feeData.lastBaseFeePerGas, "gwei")} gwei` : undefined,
+        maxFeePerGas: feeData.maxFeePerGas ? `${ethers.formatUnits(feeData.maxFeePerGas, "gwei")} gwei` : undefined,
+        maxPriorityFeePerGas: feeData.maxPriorityFeePerGas ? `${ethers.formatUnits(feeData.maxPriorityFeePerGas, "gwei")} gwei` : undefined
+      };
+    } catch (error) {
+      console.error("Error fetching gas info:", error);
+      return {};
+    }
+  }
+
+  // Factory method to create chain instances
+  static async create(chainType, options = {}) { // get Instance
+    let provider;
+    
+    switch(chainType) {
+      case CHAIN_TYPES.HARDHAT:
+        // Try to use Hardhat's provider if available
+        const hardhat = require("hardhat");
+        provider = hardhat.ethers.provider;
+        
+        break;
+
+      case CHAIN_TYPES.ETHEREUM_MAINNET:
+        const { ethers } = require("ethers");
+        const provider = new ethers.JsonRpcProvider("https://sepolia.infura.io/v3/YOUR_INFURA_PROJECT_ID");
+        break;
+      case CHAIN_TYPES.ETHEREUM_SEPOLIA:
+        const { ethers } = require("ethers"); 
+        const provider = new ethers.JsonRpcProvider("https://sepolia.infura.io/v3/YOUR_INFURA_PROJECT_ID");
+      break;
+
+        
+      /*default:
+        const config = CHAIN_CONFIGS[chainType];
+        console.log(chainType)
+        if (!config) {
+          throw new Error(`Unknown chain type: ${chainType}`);
+        }
+        
+        const rpcUrl = options.rpcUrl || config.rpcUrl;
+        const finalRpcUrl = options.apiKey ? `${rpcUrl}${options.apiKey}` : rpcUrl;
+        provider = new ethers.JsonRpcProvider(finalRpcUrl);*/
+
+    }
+
+    const chain = new Chain(provider, chainType);
+    await chain.init();
+    return chain;
+  }
+
+  static async create(chainType) {
+    if (!Chain.instance) {
+        if (chainType === CHAIN_TYPES.HARDHAT) {
+           // Try to use Hardhat's provider if available
+            const hardhat = require("hardhat");
+            provider = hardhat.ethers.provider;
+            
+            const chain = await Chain.create(_ethers);            
+            Chain.instance = chain
+        } else {
+            const chain = await Chain.create(ethers);            
+            Chain.instance = chain
+        }
+
+    return Chain.instance;
+  }
+
+  static async createHardhat() {
+    return this.create(CHAIN_TYPES.HARDHAT);
+  }
+
+  static async createEthereumMainnet(options = {}) {
+    return this.create(CHAIN_TYPES.ETHEREUM_MAINNET, options);
+  }
+}
+
+// Singleton instances
+let instances = {};
+
+Chain.getInstance = async (chainType, options = {}) => {
+  if (!instances[chainType]) {
+    instances[chainType] = await Chain.create(chainType, options);
+  }
+  return instances[chainType];
+};
+
+Chain.clearInstances = () => {
+  instances = {};
+};
+
+module.exports = { 
+  Chain, 
+  CHAIN_TYPES,
+  CHAIN_CONFIGS
+};

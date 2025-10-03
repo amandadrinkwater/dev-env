@@ -1008,11 +1008,13 @@ async getOptimalSwapAmount(tokenInSymbol, maxPriceImpact = 1.0) {
     return pool;
   }*/
 
-  static create(chain, poolAddress, dexType = DEX_TYPES.UNISWAP_V2) {
+
+static async create(poolAddress, chain, dexType = DEX_TYPES.UNISWAP_V2) {
   const key = `${chain.chainType}:${dexType}:${ethers.getAddress(poolAddress)}`;
   
   if (!Pool.instances.has(key)) {
     const pool = new Pool(poolAddress, chain, dexType);
+    await pool.init();
     Pool.instances.set(key, pool);
   }
   
@@ -1645,12 +1647,12 @@ async function demoAdvancedSwapStrategies() {
     const chain = { provider, chainId: 1 };
     */
 
-    const hre = require("hardhat");
+    //const hre = require("hardhat");
 
-    const { ethers } = hre;
+    //const { ethers } = hre;
     const { Chain } = require("./Chain.cjs")
 
-    //  const chain = await Chain.create(ethers);
+    //const chain = await Chain.create(ethers);
 
     const chain = await Chain.createHardhat();
 

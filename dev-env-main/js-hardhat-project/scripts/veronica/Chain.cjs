@@ -1,15 +1,13 @@
-const { ethers } = require("ethers");
 
-const { RPCs } = require("../utils/RPCs.cjs");
+
+// this could be shared like monostate ?
+
+const { ethers } = require("ethers");
+const { RPCs } = require("../utils/rpcs.cjs");
 
 const CHAIN_TYPES = {
   HARDHAT: 'hardhat',
-  ETHEREUM_MAINNET: 'ethereum_mainnet',
-  ETHEREUM_SEPOLIA: 'ethereum_sepolia',
-  POLYGON_MAINNET: 'polygon_mainnet',
-  POLYGON_MUMBAI: 'polygon_mumbai',
-  ARBITRUM_MAINNET: 'arbitrum_mainnet',
-  OPTIMISM_MAINNET: 'optimism_mainnet',
+  ETHEREUM: 'ethereum',
   DEFAULT: 'default'
 };
 
@@ -24,7 +22,7 @@ const CHAIN_CONFIGS = {
     chainId: 11155111,
     name: "Ethereum Sepolia"
   },
-  POLYGON_MAINNET: {
+  /*POLYGON_MAINNET: {
     rpcUrl: process.env.POLYGON_RPC_URL || "https://polygon-rpc.com",
     chainId: 137,
     name: "Polygon Mainnet"
@@ -33,7 +31,7 @@ const CHAIN_CONFIGS = {
     rpcUrl: process.env.POLYGON_AMOY_RPC_URL || "https://polygon-amoy.g.alchemy.com/v2/eJL1q2Fuwb94bHgnfERZxCNjP3AJKasH",
     chainId: 80002,
     name: "Polygon Amoy"
-  },
+  }, */
   HARDHAT: {
     rpcUrl: "http://localhost:8545",
     chainId: 31337,
@@ -41,64 +39,54 @@ const CHAIN_CONFIGS = {
   }
 };
 
+
 class Chain {
-  constructor(provider, chainType = CHAIN_TYPES.DEFAULT) {
-    this.provider = provider;
+  constructor(ethers, chainType = CHAIN_TYPES.DEFAULT) {
+    this.ethers = ethers;
+    this.provider = ethers.provider;
     this.chainType = chainType;
     this.network = null;
-    this.instance = null;
   }
 
   async init() {
     this.network = await this.provider.getNetwork();
-    if (this.config && this.network.chainId !== BigInt(this.config.chainId)) {
-      console.warn(`Chain ID mismatch: expected ${this.config.chainId}, got ${this.network.chainId}`);
-    }
   }
+
+  // max fee etc
 
   async getChainActualStatus() {  
     try {
       const network = await this.provider.getNetwork();
       const blockNumber = await this.provider.getBlockNumber();
-      const feeData = await this.provider.getFeeData();
-      
-      // Use gasPrice if available, otherwise use maxFeePerGas for EIP-1559 chains
-      const gasPrice = feeData.gasPrice || feeData.maxFeePerGas;
-      
-      return {
-        network, 
-        blockNumber, 
-        gasPrice: gasPrice ? `${ethers.formatUnits(gasPrice, "gwei")} gwei` : 'Unknown',
-        gasPriceWei: gasPrice ? gasPrice.toString() : 'Unknown',
-        baseFeePerGas: feeData.lastBaseFeePerGas ? `${ethers.formatUnits(feeData.lastBaseFeePerGas, "gwei")} gwei` : undefined,
-        maxFeePerGas: feeData.maxFeePerGas ? `${ethers.formatUnits(feeData.maxFeePerGas, "gwei")} gwei` : undefined,
-        maxPriorityFeePerGas: feeData.maxPriorityFeePerGas ? `${ethers.formatUnits(feeData.maxPriorityFeePerGas, "gwei")} gwei` : undefined
-      };
+      const gasPrice = await this.provider.getGasPrice();
+
+      const gasInfo = await this.getGasInfo();
+        
+        return {    network, 
+                    blockNumber, 
+                    gasPrice: ethers.formatUnits(gasPrice, "gwei"),
+                    ...gasInfo
+               };
+
     } catch (error) {
       console.error("Error fetching chain status:", error);
       throw error;
     }
-  }
+}
 
-  async printToConsole() {
+async printToConsole() {
     console.log(`\n=== Chain Status ===`);  
     const status = await this.getChainActualStatus();
     console.log("Network:", status.network.name);
     console.log("Chain ID:", status.network.chainId);
     console.log("Latest Block Number:", status.blockNumber);
-    console.log("Gas Price:", status.gasPrice);
-    
-    if (status.baseFeePerGas) {
-      console.log("Base Fee Per Gas:", status.baseFeePerGas);
-    }
+    console.log("Current Gas Price:", `${status.gasPrice} gwei`);
     if (status.maxFeePerGas) {
       console.log("Max Fee Per Gas:", status.maxFeePerGas);
-    }
-    if (status.maxPriorityFeePerGas) {
       console.log("Max Priority Fee Per Gas:", status.maxPriorityFeePerGas);
     }
     console.log(`====================\n`);
-  }
+}
 
   async getGasInfo() {
     try {
@@ -106,7 +94,6 @@ class Chain {
       
       return {
         gasPrice: feeData.gasPrice ? `${ethers.formatUnits(feeData.gasPrice, "gwei")} gwei` : undefined,
-        baseFeePerGas: feeData.lastBaseFeePerGas ? `${ethers.formatUnits(feeData.lastBaseFeePerGas, "gwei")} gwei` : undefined,
         maxFeePerGas: feeData.maxFeePerGas ? `${ethers.formatUnits(feeData.maxFeePerGas, "gwei")} gwei` : undefined,
         maxPriorityFeePerGas: feeData.maxPriorityFeePerGas ? `${ethers.formatUnits(feeData.maxPriorityFeePerGas, "gwei")} gwei` : undefined
       };
@@ -116,78 +103,62 @@ class Chain {
     }
   }
 
-  // Factory method to create chain instances
-  static async create(chainType, options = {}) { // get Instance
-    let provider;
+  async getLatestBlock() {
+    try {
+      this.block = await this.provider.getBlock("latest");
+      this.blockNumber = this.block.number;
+      return this.block;
+    } catch (error) {
+      console.error("Error fetching latest block:", error);
+      throw error;
+    }
+  }
+
+  static async create(ethersProvider, chainType = CHAIN_TYPES.DEFAULT) {
+    let chain;
     
     switch(chainType) {
       case CHAIN_TYPES.HARDHAT:
-        // Try to use Hardhat's provider if available
-        const hardhat = require("hardhat");
-        provider = hardhat.ethers.provider;
-        
+        chain = new HardhatChain(ethersProvider);
         break;
-        
-      /*default:
-        const config = CHAIN_CONFIGS[chainType];
-        console.log(chainType)
-        if (!config) {
-          throw new Error(`Unknown chain type: ${chainType}`);
-        }
-        
-        const rpcUrl = options.rpcUrl || config.rpcUrl;
-        const finalRpcUrl = options.apiKey ? `${rpcUrl}${options.apiKey}` : rpcUrl;
-        provider = new ethers.JsonRpcProvider(finalRpcUrl);*/
-
+      default:
+        chain = new Chain(ethersProvider, chainType);
     }
 
-    const chain = new Chain(provider, chainType);
     await chain.init();
     return chain;
   }
 
-  static async create(chainType) {
-    if (!Chain.instance) {
-        if (chainType === CHAIN_TYPES.HARDHAT) {
-           // Try to use Hardhat's provider if available
-            const hardhat = require("hardhat");
-            provider = hardhat.ethers.provider;
-            
-            const chain = await Chain.create(_ethers);            
-            Chain.instance = chain
-        } else {
-            const chain = await Chain.create(ethers);            
-            Chain.instance = chain
-        }
-
-    return Chain.instance;
+  static async createHardhat() {    
+    const hre = require("hardhat");
+    return Chain.create(hre.ethers, CHAIN_TYPES.HARDHAT);
   }
 
-  static async createHardhat() {
-    return this.create(CHAIN_TYPES.HARDHAT);
+  static async createEthereumMainnet() {
+    const { ethers } = require("ethers");
+    const provider = ethers.getDefaultProvider('mainnet', {
+      infura: process.env.INFURA_API_KEY,
+      alchemy: process.env.ALCHEMY_API_KEY,
+      etherscan: process.env.ETHERSCAN_API_KEY,
+    });
+    return Chain.create(provider, CHAIN_TYPES.ETHEREUM);
   }
 
-  static async createEthereumMainnet(options = {}) {
-    return this.create(CHAIN_TYPES.ETHEREUM_MAINNET, options);
+  static async createEthereumSepolia() {
+    const { ethers } = require("ethers");
+    const provider = ethers.getDefaultProvider('sepolia', {
+      infura: process.env.INFURA_API_KEY,
+      alchemy: process.env.ALCHEMY_API_KEY,
+      etherscan: process.env.ETHERSCAN_API_KEY,
+    });
+    return Chain.create(provider, CHAIN_TYPES.ETHEREUM);
   }
+
 }
 
-// Singleton instances
-let instances = {};
-
-Chain.getInstance = async (chainType, options = {}) => {
-  if (!instances[chainType]) {
-    instances[chainType] = await Chain.create(chainType, options);
+class HardhatChain extends Chain {
+  constructor(ethersProvider) {
+    super(ethersProvider, CHAIN_TYPES.HARDHAT);
   }
-  return instances[chainType];
-};
-
-Chain.clearInstances = () => {
-  instances = {};
-};
-
-module.exports = { 
-  Chain, 
-  CHAIN_TYPES,
-  CHAIN_CONFIGS
-};
+}
+module.exports = { Chain, CHAIN_TYPES };
