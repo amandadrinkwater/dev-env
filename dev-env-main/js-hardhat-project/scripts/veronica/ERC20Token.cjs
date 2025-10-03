@@ -102,7 +102,7 @@ class ERC20Token {
       const balance = ethers.formatUnits(rawBalance, this.decimals);
       
       console.log(`💰 ${this.symbol} Balance for ${account.address}:`, balance);
-      return { raw: rawBalance, formatted: balance };
+      return balance;
     } catch (error) {
       console.error(`Error fetching balance for ${account.address}:`, error);
       throw error;
@@ -191,17 +191,19 @@ async function example_allowance_approve() {
     const { ethers } = hre;
     
     // Initialize chain and accounts
-    //const chain = await Chain.create(ethers, CHAIN_TYPES.HARDHAT);
+    const chain = await Chain.createHardhat();
     
-    /*
+    
     const whaleAccount = await Account.create(chain, addresses.WHALES.USDC);
     const abbotAccount = await Account.create(chain, addresses.HARDHAT_ACCOUNTS.Abbot.address);
     const bakerAccount = await Account.create(chain, addresses.HARDHAT_ACCOUNTS.Baker.address);
-    */
+    
 
+    /*
     const whaleAccount = Account.PREDEFINED_ACCOUNTS.WhaleUSDC
     const abbotAccount = Account.PREDEFINED_ACCOUNTS.Abbot
     const bakerAccount = Account.PREDEFINED_ACCOUNTS.Baker
+    */
 
     console.log('📋 Account Information:');
     console.log('Whale Address:', whaleAccount.address);
@@ -318,7 +320,7 @@ async function example_transfer() {
     const hre = require("hardhat");
     const { ethers } = hre;
 
-    const chain = await Chain.create(CHAIN_TYPES.HARDHAT);
+    const chain = await Chain.createHardhat();
     
     // Create accounts
     const whaleAccount = await Account.create(chain, addresses.WHALES.USDC);

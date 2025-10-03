@@ -77,3 +77,14 @@ tabela com os dados de logaritmos
 comecar a baixar githubs preselecionados
 
 melhorar forma de apresentar o nome da rede, check test-chain.cjs
+
+garantir que account e pool estao na mesma chain
+
+send raw tx
+
+colocar contas pre-definidas em Account
+criar funcao createEthreummainet in Account, and the same for hardhat, etc, where we check compability between operations
+
+createPredefined functions is giving problems, need to test.. Not using now on this version
+
+create a Spolia01 entry on addresses table and then refactor here

@@ -1,36 +1,34 @@
-const { Chain, CHAIN_TYPES } = require("../../Chain.cjs");
 const { Account } = require("../../Account.cjs");
-
-const { addresses } = require("../../../utils/addresses.cjs")
 
 async function main() {
   try {
     // 1. Create a chain instance first
-    const hardhatChain = await Chain.create(CHAIN_TYPES.HARDHAT);
     
-    // 2. Create accounts using the chain instance
-    const account1 = await Account.create(hardhatChain, "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266");
+    const whale = await Account.createWhaleUSDC()
+
+    const balanceWhale = await whale.getNativeBalance();
+    console.log(`Balance Whale: ${balanceWhale} ETH`);
     
+    const abbot = await Account.createAbbot();
+
     // 3. Use the account
-    const balance = await account1.getNativeBalance();
-    console.log(`Balance: ${balance} ETH`);
-    
-    
-    const predefined = await Account.getPredefinedAccounts(hardhatChain);
-    console.log(`Abbot balance: ${await predefined.Abbot.getNativeBalance()} ETH`);
-    
+    const balanceAbbot = await abbot.getNativeBalance();
+    console.log(`Balance Abbot: ${balanceAbbot} ETH`);
+
+    await whale.transferNativeToken(abbot.address, "1000");
+    await whale.transferNativeToken(abbot.address, "3000");
+
+    const balanceAbbotAfter = await abbot.getNativeBalance();
+    console.log(`Balance Abbot After: ${balanceAbbotAfter} ETH`);
+
+    const mainnet01 = await Account.createMainnet01()
+    const balanceMainnet01 = await mainnet01.getNativeBalance()
+    console.log(`Balance Mainnet01 After: ${balanceMainnet01} ETH`)
+
+
   } catch (error) {
     console.error("Error:", error);
   }
-}
-
-// For mainnet usage
-async function mainnetExample() {
-  const mainnetChain = await Chain.create(CHAIN_TYPES.ETHEREUM_MAINNET);
-  
-  const mainnetAccount = await Account.create(mainnetChain, a);
-  const balance = await mainnetAccount.getNativeBalance();
-  console.log(`Mainnet balance: ${balance} ETH`);
 }
 
 main()

@@ -3,7 +3,7 @@
 // this could be shared like monostate ?
 
 const { ethers } = require("ethers");
-const { RPCs } = require("../utils/rpcs.cjs");
+const { RPCs } = require("../utils/RPCs.cjs");
 
 const CHAIN_TYPES = {
   HARDHAT: 'hardhat',
@@ -41,6 +41,9 @@ const CHAIN_CONFIGS = {
 
 
 class Chain {
+
+  // not a singleton...Or Monostate
+
   constructor(ethers, chainType = CHAIN_TYPES.DEFAULT) {
     this.ethers = ethers;
     this.provider = ethers.provider;
@@ -56,23 +59,17 @@ class Chain {
 
   async getChainActualStatus() {  
     try {
-      const network = await this.provider.getNetwork();
-      const blockNumber = await this.provider.getBlockNumber();
-      const gasPrice = await this.provider.getGasPrice();
+      
+    const network = await this.provider.getNetwork();
+    const blockNumber = await this.provider.getBlockNumber();
+    const gasInfo = await this.getGasInfo();   // ✅ use your method
 
-      const gasInfo = await this.getGasInfo();
-        
-        return {    network, 
-                    blockNumber, 
-                    gasPrice: ethers.formatUnits(gasPrice, "gwei"),
-                    ...gasInfo
-               };
-
+    return { network, blockNumber, ...gasInfo };
     } catch (error) {
       console.error("Error fetching chain status:", error);
       throw error;
     }
-}
+  }
 
 async printToConsole() {
     console.log(`\n=== Chain Status ===`);  
@@ -97,6 +94,7 @@ async printToConsole() {
         maxFeePerGas: feeData.maxFeePerGas ? `${ethers.formatUnits(feeData.maxFeePerGas, "gwei")} gwei` : undefined,
         maxPriorityFeePerGas: feeData.maxPriorityFeePerGas ? `${ethers.formatUnits(feeData.maxPriorityFeePerGas, "gwei")} gwei` : undefined
       };
+      
     } catch (error) {
       console.error("Error fetching gas info:", error);
       return {};
@@ -131,26 +129,22 @@ async printToConsole() {
 
   static async createHardhat() {    
     const hre = require("hardhat");
+    // Replace for HardhatChain
     return Chain.create(hre.ethers, CHAIN_TYPES.HARDHAT);
   }
 
   static async createEthereumMainnet() {
+    
     const { ethers } = require("ethers");
-    const provider = ethers.getDefaultProvider('mainnet', {
-      infura: process.env.INFURA_API_KEY,
-      alchemy: process.env.ALCHEMY_API_KEY,
-      etherscan: process.env.ETHERSCAN_API_KEY,
-    });
+    const provider = new ethers.JsonRpcProvider(RPCs.mainnetInfura)
     return Chain.create(provider, CHAIN_TYPES.ETHEREUM);
   }
 
   static async createEthereumSepolia() {
+    // to test, not yet finished
     const { ethers } = require("ethers");
-    const provider = ethers.getDefaultProvider('sepolia', {
-      infura: process.env.INFURA_API_KEY,
-      alchemy: process.env.ALCHEMY_API_KEY,
-      etherscan: process.env.ETHERSCAN_API_KEY,
-    });
+    const provider = new ethers.JsonRpcProvider(RPCs.sepoliaAlchemy)
+
     return Chain.create(provider, CHAIN_TYPES.ETHEREUM);
   }
 
@@ -161,4 +155,7 @@ class HardhatChain extends Chain {
     super(ethersProvider, CHAIN_TYPES.HARDHAT);
   }
 }
-module.exports = { Chain, CHAIN_TYPES };
+
+Chain.CHAIN_TYPES = CHAIN_TYPES
+
+module.exports = { Chain };

@@ -1,5 +1,5 @@
 const { ethers } = require("ethers");
-const Chain = require("./Chain.cjs");
+const{ Chain } = require("./Chain.cjs");
 const addresses = require("../utils/addresses.cjs");
 
 class Account {
@@ -10,16 +10,35 @@ class Account {
     this.signer = null;
   }
 
-  async init() {
+   async init() {
+    // to test, it is to be used with mainnet account and testnet accounts
+   /*
     try {
-      // Use the chain's ethers instance if available, otherwise use global ethers
-      const ethersInstance = this.chain.ethers || ethers;
-      this.signer = await ethersInstance.getSigner(this.address);
-      return this;
+      // Default: expect PRIVATE_KEY to be available for external (non-Hardhat) chains
+      const pk = process.env.PRIVATE_KEY;
+      if (!pk) {
+        throw new Error(
+          `No PRIVATE_KEY found for account ${this.address}. ` +
+          `Use HardhatAccount/ImpersonatedHardhatAccount for local dev, ` +
+          `or set PRIVATE_KEY in .env for external chains.`
+        );
+      }
+
+      this.signer = new ethers.Wallet(pk, this.provider);
+
+      // Safety check: does PK-derived address match this.address?
+      const signerAddress = await this.signer.getAddress();
+      if (signerAddress.toLowerCase() !== this.address.toLowerCase()) {
+        console.warn(
+          `⚠️ Warning: Provided address ${this.address} does not match private key address ${signerAddress}`
+        );
+      }*/
+
+      return this; /*
     } catch (error) {
       console.error(`Error initializing account ${this.address}:`, error);
       throw error;
-    }
+    } */
   }
 
   static checkAccountAddress(address) {
@@ -130,47 +149,103 @@ class Account {
     return Account.instances ? Array.from(Account.instances.keys()) : [];
   }
 
+  // not a good way to create predefined accounts, but that works
+  static async createWhaleUSDC() {
+
+    const hardhatChain = await Chain.createHardhat();
+    const whale = await Account.create(hardhatChain, addresses.WHALES.USDC);
+    
+    return whale;
+
+  }
+
+  static async createAbbot() {
+
+    const hardhatChain = await Chain.createHardhat();
+    const whale = await Account.create(hardhatChain, addresses.HARDHAT_ACCOUNTS.Abbot.address);
+    
+    return whale;
+
+  }
+
+  static async createMainnet01() {
+
+    const mainnetChain = await Chain.createEthereumMainnet()
+    const mainnet01 = await Account.create(mainnetChain, addresses.WALLETS.MAINNET01.address)
+
+    const pk = addresses.WALLETS.MAINNET01.privKey
+
+    mainnet01.signer = new ethers.Wallet(pk, mainnet01.provider);
+
+    return mainnet01
+
+  }
+
+  static async createSepolia01() {
+
+    // create a Spolia01 entry and then refactor here
+
+    const sepoliaChain = await Chain.createEthereumSepolia()
+    const sepolia01 = await Account.create(sepoliaChain, addresses.WALLETS.MAINNET01.address)
+
+    const pk = addresses.WALLETS.MAINNET01.privKey
+
+    sepolia01.signer = new ethers.Wallet(pk, sepolia01.provider);
+
+    return sepolia01
+
+  }
+
+  /*
   // Factory method for creating predefined accounts
-  static async createPredefined(chain, accountName) {
+  static async createPredefined(accountName) {
+
+    // it has many problems...  Not fully tested, not going to use now
+    let chain;
     let address;
     
     switch(accountName) {
       case 'WhaleUSDC':
+        chain = Chain.createHardhat()
         address = addresses.WHALES.USDC;
         break;
       case 'Abbot':
+        chain = Chain.createHardhat()
         address = addresses.HARDHAT_ACCOUNTS.Abbot.address;
         break;
       case 'Costello':
+        chain = Chain.createHardhat()
         address = addresses.HARDHAT_ACCOUNTS.Costello.address;
         break;
       case 'Baker':
+        chain = Chain.createHardhat()
         address = addresses.HARDHAT_ACCOUNTS.Baker.address;
         break;
+      case 'Mainnet01':
+        chain = Chain.createEthereumMainnet()
+        address = addresses.WALLETS.MAINNET01
       default:
         throw new Error(`Unknown predefined account: ${accountName}`);
     }
     
     return await Account.create(chain, address);
   }
+    */
 
-  // Batch create predefined accounts
-  static async createPredefinedAccounts(chain) {
-    const accountNames = ['WhaleUSDC', 'Abbot', 'Costello', 'Baker'];
-    const accounts = {};
-    
-    for (const name of accountNames) {
-      accounts[name] = await Account.createPredefined(chain, name);
-    }
-    
-    return accounts;
-  }
 }
+  
 
 class HardhatAccount extends Account {
+  
   async init() {
-    await super.init();
-    return this;
+    try {
+      // Hardhat provider supports getSigner directly
+      this.signer = await this.provider.getSigner(this.address);
+      return this;
+    } catch (error) {
+      console.error(`Error initializing Hardhat account ${this.address}:`, error);
+      throw error;
+    }
   }
   
   async setBalance(amount) {
@@ -203,6 +278,7 @@ class ImpersonatedHardhatAccount extends HardhatAccount {
       throw error;
     }
   }
+  
 }
 
 // Initialize instances map
