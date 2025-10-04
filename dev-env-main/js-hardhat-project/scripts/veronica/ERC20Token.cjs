@@ -15,7 +15,7 @@ node ./scripts/veronica/ERC20Token.cjs transfer
 const { ethers, assert } = require("ethers");
 const abis = require("../utils/abis.cjs");
 
-const { Chain, CHAIN_TYPES } = require("./Chain.cjs");
+const { Chain } = require("./Chain.cjs");
 // const CHAIN_TYPES = Chain.CHAIN_TYPES;
 
 const { Account } = require("./Account.cjs");
@@ -101,10 +101,12 @@ class ERC20Token {
       const rawBalance = await this.contract.balanceOf(account.address);
       const balance = ethers.formatUnits(rawBalance, this.decimals);
       
-      console.log(`💰 ${this.symbol} Balance for ${account.address}:`, balance);
+      const accountID = account.name ? account.name : account.address;
+
+      console.log(`💰 ${this.symbol} Balance for ${account.name}:`, balance);
       return balance;
     } catch (error) {
-      console.error(`Error fetching balance for ${account.address}:`, error);
+      console.error(`Error fetching balance for ${account.name}:`, error);
       throw error;
     }
   }
@@ -118,7 +120,8 @@ class ERC20Token {
       
       // Check balance before transfer
       const balance = await this.getBalance(fromAccount);
-      if (BigInt(balance.raw) < transferAmount) {
+
+      if (balance < transferAmount) {
         throw new Error(`Insufficient ${this.symbol} balance. Needed: ${amount}, Has: ${balance.formatted}`);
       }
       
@@ -176,9 +179,6 @@ class ERC20Token {
     return ERC20Token.instances.get(key);
   }
 
-static async createMultiple(chain, tokenAddresses) {
-  return Promise.all(tokenAddresses.map(addr => ERC20Token.create(addr, chain)));
-}
 
 }
 
@@ -191,19 +191,11 @@ async function example_allowance_approve() {
     const { ethers } = hre;
     
     // Initialize chain and accounts
-    const chain = await Chain.createHardhat();
-    
-    
-    const whaleAccount = await Account.create(chain, addresses.WHALES.USDC);
-    const abbotAccount = await Account.create(chain, addresses.HARDHAT_ACCOUNTS.Abbot.address);
-    const bakerAccount = await Account.create(chain, addresses.HARDHAT_ACCOUNTS.Baker.address);
-    
 
-    /*
-    const whaleAccount = Account.PREDEFINED_ACCOUNTS.WhaleUSDC
-    const abbotAccount = Account.PREDEFINED_ACCOUNTS.Abbot
-    const bakerAccount = Account.PREDEFINED_ACCOUNTS.Baker
-    */
+    const whaleAccount = await Account.createWhaleUSDC()
+    const abbotAccount = await Account.createAbbot()
+    const bakerAccount = await Account.createBaker()
+
 
     console.log('📋 Account Information:');
     console.log('Whale Address:', whaleAccount.address);
@@ -212,7 +204,10 @@ async function example_allowance_approve() {
     
     // Initialize USDC token
     console.log("\n🪙 Initializing USDC Token...");
-    const usdcToken = await ERC20Token.create(addresses.TOKENS.USDC, chain);
+
+    const { USDC } = require('./Tokens.cjs')
+
+    const usdcToken = await USDC.createHardhat()
     
     // Demo 1: Check initial allowance (should be 0)
     console.log("\n" + "=".repeat(60));

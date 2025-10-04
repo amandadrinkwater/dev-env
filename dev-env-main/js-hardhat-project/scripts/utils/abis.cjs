@@ -21,6 +21,12 @@ module.exports = {
   "event Approval(address indexed owner, address indexed spender, uint256 value)"
   ],
 
+  WETH_ABI: [
+    "function deposit() payable",
+    "function withdraw(uint256)",
+    "function balanceOf(address) view returns (uint256)"
+  ],
+
   UNIV2_PAIR: [
      // Read functions
   "function name() external pure returns (string memory)",

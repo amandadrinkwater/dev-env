@@ -1,6 +1,7 @@
 const { Account } = require("../../Account.cjs")
 const { ERC20Token } = require("../../ERC20Token.cjs")
-const  addresses  = require("../../../utils/addresses.cjs")
+const  addresses  = require("../../../utils/addresses.cjs");
+const { Chain } = require("../../Chain.cjs");
 
 async function main() {
   try {
@@ -10,7 +11,11 @@ async function main() {
     const whaleAccount = await Account.createWhaleUSDC()
     const abbotAccount = await Account.createAbbot();
 
-    const chain = whaleAccount.chain
+    // const chain = whaleAccount.chain
+
+    const chain = await Chain.createHardhat();
+    const status = await chain.getChainActualStatus();
+    console.log(`✅ Connected to ${status.network.name} ! Block: ${status.blockNumber}`);
 
     console.log('Whale Address:', whaleAccount.address);
     console.log('Whale ETH Balance:', await whaleAccount.getNativeBalance());

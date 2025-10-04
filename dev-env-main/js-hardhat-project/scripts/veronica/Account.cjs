@@ -154,7 +154,28 @@ class Account {
 
     const hardhatChain = await Chain.createHardhat();
     const whale = await Account.create(hardhatChain, addresses.WHALES.USDC);
-    
+    whale.name = 'WhaleUSDC'
+
+    return whale;
+
+  }
+
+  static async createWhaleDAI() {
+
+    const hardhatChain = await Chain.createHardhat();
+    const whale = await Account.create(hardhatChain, addresses.WHALES.DAI);
+    whale.name = 'WhaleDAI'
+
+    return whale;
+
+  }
+
+  static async createWhaleAAVE() {
+
+    const hardhatChain = await Chain.createHardhat();
+    const whale = await Account.create(hardhatChain, addresses.WHALES.AAVE);
+    whale.name = 'WhaleAAVE'
+
     return whale;
 
   }
@@ -162,28 +183,127 @@ class Account {
   static async createAbbot() {
 
     const hardhatChain = await Chain.createHardhat();
-    const whale = await Account.create(hardhatChain, addresses.HARDHAT_ACCOUNTS.Abbot.address);
-    
-    return whale;
+    const abbot = await Account.create(hardhatChain, addresses.HARDHAT_ACCOUNTS.Abbot.address);
+    abbot.name = 'Abbot'
+
+    return abbot;
 
   }
+
+  static async createSpock() {
+
+    const hardhatChain = await Chain.createHardhat();
+    const account = await Account.create(hardhatChain, addresses.HARDHAT_ACCOUNTS.Spock.address);
+    account.name = 'Spock'
+
+    return account;
+
+  }
+
+  static async createBaker() {
+
+    const hardhatChain = await Chain.createHardhat();
+    const account = await Account.create(hardhatChain, addresses.HARDHAT_ACCOUNTS.Baker.address);
+    account.name = 'Baker'
+
+    return account;
+
+  }
+
+  static async createVitalik() {
+
+    const hardhatChain = await Chain.createHardhat();
+    const account = await Account.create(hardhatChain, addresses.WALLETS.VITALIK);
+    account.name = 'Vitalik'
+
+    return account;
+
+  }
+
+  /*
+
+    VITALIK:    "0xAb5801a7D398351b8bE11C439e05C5B3259aeC9B", 
+    BINANCE7:   "0xBE0eB53F46cd790Cd13851d5EFf43D12404d33E8", // not verified
+    UNISWAPV2:  "0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f",
+    COINBASE_1: "0x71660c4005ba85c37ccec55d0c4493e66fe775d3",
+    COINBASE_2: "0x503828976d22510aad0201ac7ec88293211d23da",
+    COINBASE_3: "0xddfabcdc4d8ffc6d5beaf154f18b778f892a0740",
+    COINBASE_4: "0x3cd751e6b0078be393132286c442345e5dc49699"
+
+  */
+
+    static async createHardhatCoinbase01() {
+
+    const hardhatChain = await Chain.createHardhat();
+    const account = await Account.create(hardhatChain, addresses.WALLETS.COINBASE_1);
+    account.name = 'Coinbase 01'
+
+    return account;
+
+  }
+
+  static async createHardhatBinance07() {
+
+    const hardhatChain = await Chain.createHardhat();
+    const account = await Account.create(hardhatChain, addresses.WALLETS.BINANCE7);
+    account.name = 'Binance 07'
+
+    return account;
+
+  }
+
+    /*
+
+  
+    Ben: {
+        address: "0x15d34AAf54267DB7d7c367839AAf71A00a2C6A65",
+        privKey: "0x47e179ec197488593b187f80a00eb0da91f1b9d0b13f8733639f19c30a34926e"
+    }
+    ,
+    
+    Kadu: {
+        address: "0x9965507D1a55bcC2695C58ba16FB37d819B0A4dc",
+        privKey: "0x8b3a350cf5c34c9194ca85829a2df0ec3153be0318b5e2d3348e872092edffba"
+    },
+
+    Claudio: { 
+        address: "0x976EA74026E726554dB657fA54763abd0C3a0aa9",
+        privKey: "0x646f1ce2fdad0e6deeeb5c7ff1609f5667cfe8e4f1a7f9a87e5a5d3c3f0e6b9d"
+    }
+
+  */
 
   static async createMainnet01() {
 
     const mainnetChain = await Chain.createEthereumMainnet()
-    const mainnet01 = await Account.create(mainnetChain, addresses.WALLETS.MAINNET01.address)
+    const account = await Account.create(mainnetChain, addresses.WALLETS.MAINNET01.address)
 
     const pk = addresses.WALLETS.MAINNET01.privKey
 
-    mainnet01.signer = new ethers.Wallet(pk, mainnet01.provider);
+    account.signer = new ethers.Wallet(pk, account.provider);
+    account.name = 'Mainnet01'
 
-    return mainnet01
+    return account
+
+  }
+
+  static async createMainnet02() {
+
+    const mainnetChain = await Chain.createEthereumMainnet()
+    const account = await Account.create(mainnetChain, addresses.WALLETS.MAINNET02.address)
+
+    const pk = addresses.WALLETS.createMainnet02.privKey
+
+    account.signer = new ethers.Wallet(pk, account.provider);
+    account.name = 'Mainnet02'
+
+    return account
 
   }
 
   static async createSepolia01() {
 
-    // create a Spolia01 entry and then refactor here
+    // I need to retrieve the Sepolia01 data, the data here is wrong
 
     const sepoliaChain = await Chain.createEthereumSepolia()
     const sepolia01 = await Account.create(sepoliaChain, addresses.WALLETS.MAINNET01.address)
@@ -195,6 +315,9 @@ class Account {
     return sepolia01
 
   }
+
+  
+  
 
   /*
   // Factory method for creating predefined accounts

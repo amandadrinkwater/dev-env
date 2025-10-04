@@ -16,7 +16,7 @@ class ContractUniswapQuery {
 
         this.id = 'Contract UniswapQuery';
         this.address = contracts.FlashBotsUniswapQuery.address;
-        this.chain = chain; // ethereum
+        this.chain = Chain.; // ethereum
         this.provider = chain.provider;
         this.contract = new ethers.Contract(this.address, contracts.FlashBotsUniswapQuery.ABI, this.provider);
         

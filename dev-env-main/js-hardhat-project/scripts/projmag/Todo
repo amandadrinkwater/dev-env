@@ -88,3 +88,7 @@ criar funcao createEthreummainet in Account, and the same for hardhat, etc, wher
 createPredefined functions is giving problems, need to test.. Not using now on this version
 
 create a Spolia01 entry on addresses table and then refactor here
+
+wrap WETH, colocar funcoes especificas, colocar ABI, balanceof 
+
+seguir recomendacoes Deep
