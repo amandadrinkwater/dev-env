@@ -1,39 +1,3 @@
-
-
-colocar test de hard hat no script de inicializacao
-
-criar funcao para ligar/desligar ambiente hardhat 
-
-implement function to code function into Hex call
-
-
-check better tools to test, like hardhat tools, foundry etc...
-
-Mint ?
-wrap WETH (wth fund from whale)
-transfer acccount to account - weth, usdc(with funding)
-
-
-script para testar a instalacao do node, etc... nao sei o que colocar
-setar e verificar para hardhat e para normal... algum objeto para administrar a instalacao?
-
-
-
-multitransfer
-multihop
-
-uniswap query e flashswap
-integrar com yus
-
-MEV ???? vai ser necessario?
-
-// one class for weth to wrap eth
-
-/* to talk with deep, turn Pool.csj them into eip-1599
-
-parei analisando e criando classe para Uniswap query
-readingUniswapQuery.cjs de env-tests
-
 falta testar use cases e as classes de Pool.cjs
 tem muita coisa de utilities que pode ir para outro arquivo
 
@@ -43,13 +7,43 @@ ask deep if we can delete or add product features down the hieararchy,
 
 continuar a trabalhar com o padrao dispatcher
 
+implement function to code function into Hex call
+
+check better tools to test, like hardhat tools, foundry etc...
+
+
+se der tempo refatorar as outras classes para soh receber chain, ou criar chain em funcao do argumento apropriado...
+
+mencionar que soh roda em ethers v6 na documentacao das funcoes
+
+
+
+==========================================================
+
+comecar a baixar githubs preselecionados
+
+=========================
+
+Mint ?
+
+
+estah transferindo token e verificando se tem gasolina na conta?
+criar tambem um uso de caso que engloba chamar uma bomba de gasolina de sponsor para cobrir a gasolina caso nao tenha na conta de origem
+
+multitransfer
+multihop
+
+uniswap query e flashswap
+integrar com yus
+
+MEV ???? vai ser necessario?
+
+
+/* to talk with deep, turn Pool.csj them into eip-1599
+
+
 transportar funcoes para dentro de Pool
 checar se de Pool saem Tokens, not address
-refatorar nomes de funcoes
-
-chain is coupled with all objects, we may decouple and take info functions to become static... to give the state at some point in time
-
-we may create a "ethers" object for production that changes over blocks and another for "frozen" state for inquiries at a specific block and chain
 
 on Contract Uniswap, in getPoolsByIndexRangeWithOptions change minLiquidityUSD to use all coins
 
@@ -58,23 +52,6 @@ getPoolsByIndexRangeSmart refactor
 const uniswapQuery = ContractUniswapQuery.getInstance(chain); -> mudar para ethers
 
 
-put proper keys for chains...
-
-put predefined chains to work, "create" create functions for each predefined function
-
-estou usando Deep para redefinir as classes account e chain
-
-terminar testes em chain, lers as observacoes acima e depois refatorar Account, 
-
-se der tempo refatorar as outras classes para soh receber chain, ou criar chain em funcao do argumento apropriado...
-
-mencionar que soh roda em ethers v6 na documentacao das funcoes
-
-colocar minhas contas de acesso RPC...
-
-tabela com os dados de logaritmos
-
-comecar a baixar githubs preselecionados
 
 melhorar forma de apresentar o nome da rede, check test-chain.cjs
 
@@ -82,13 +59,8 @@ garantir que account e pool estao na mesma chain
 
 send raw tx
 
-colocar contas pre-definidas em Account
-criar funcao createEthreummainet in Account, and the same for hardhat, etc, where we check compability between operations
-
-createPredefined functions is giving problems, need to test.. Not using now on this version
-
-create a Spolia01 entry on addresses table and then refactor here
 
 wrap WETH, colocar funcoes especificas, colocar ABI, balanceof 
 
 seguir recomendacoes Deep
+

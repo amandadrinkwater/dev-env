@@ -526,7 +526,7 @@ async swap(account, tokenIn, amountIn, options = {}) {
         amountOutMin, // amount1Out
         0, // amount0Out (0 for single token output)
         recipient,
-        deadline,
+        "0x",  // BigInt(deadline),
         { gasLimit: 300000 }
       );
     } else {
@@ -535,7 +535,7 @@ async swap(account, tokenIn, amountIn, options = {}) {
         0, // amount0Out
         amountOutMin, // amount1Out
         recipient,
-        deadline,
+        "0x",  // BigInt(deadline),
         { gasLimit: 300000 }
       );
     }
@@ -670,7 +670,7 @@ async swapTokensForExactTokens(account, amountOut, tokenOutSymbol, options = {})
         amountOutWei, // exact amount1Out
         0, // amount0Out
         recipient,
-        deadline,
+        "0x", // BigInt(deadline),
         { gasLimit: 300000 }
       );
     } else {
@@ -679,7 +679,7 @@ async swapTokensForExactTokens(account, amountOut, tokenOutSymbol, options = {})
         0, // amount0Out
         amountOutWei, // exact amount1Out
         recipient,
-        deadline,
+        "0x", // BigInt(deadline),
         { gasLimit: 300000 }
       );
     }
@@ -1262,6 +1262,237 @@ async getPoolInfoQuick() {
       tvl: tvl
     };
   }
+
+  /////////////// Functions for Swap, Deep suggestions, we may take them out
+
+  /**
+   * Execute a token swap with comprehensive error handling and logging
+   * @param {Object} account - The account performing the swap (must have signer)
+   * @param {string} tokenInSymbol - Input token symbol (e.g., "WETH", "USDC")
+   * @param {string|number} amountIn - Amount to swap (human-readable units)
+   * @param {Object} options - Swap options
+   * @returns {Promise<Object>} Swap transaction receipt and summary
+   */
+  async executeSwap(account, tokenInSymbol, amountIn, options = {}) {
+    try {
+      const {
+        slippage = this.slippageTolerance || 0.5,
+        deadline = Math.floor(Date.now() / 1000) + 300,
+        recipient = account.address,
+        exactOutput = false
+      } = options;
+
+      // Input validation
+      if (!account?.signer) {
+        throw new Error("Valid account with signer is required");
+      }
+      if (!tokenInSymbol || typeof tokenInSymbol !== 'string') {
+        throw new Error("Valid token symbol is required");
+      }
+      if (!amountIn || Number(amountIn) <= 0) {
+        throw new Error("Valid positive amount is required");
+      }
+
+      console.log(`\n🔄 Executing swap in pool: ${this.poolAddress}`);
+      console.log(`DEX: ${this.dexType}`);
+      console.log(`Account: ${account.address}`);
+
+      // Get swap quote first
+      let quote;
+      if (exactOutput) {
+        quote = await this.getSwapQuoteForExactOut(amountIn, tokenInSymbol, slippage);
+        console.log(`📊 Swap Quote (Exact Output):`);
+        console.log(`   Input: ${quote.input.maxAmount} ${quote.input.symbol} (max)`);
+        console.log(`   Output: ${quote.output.exactAmount} ${quote.output.symbol} (exact)`);
+      } else {
+        quote = await this.getSwapQuote(amountIn, tokenInSymbol, slippage);
+        console.log(`📊 Swap Quote (Exact Input):`);
+        console.log(`   Input: ${quote.input.amount} ${quote.input.symbol}`);
+        console.log(`   Output: ${quote.output.amount} ${quote.output.symbol}`);
+        console.log(`   Minimum: ${quote.output.amountMin} ${quote.output.symbol}`);
+      }
+      console.log(`   Slippage: ${slippage}%`);
+      console.log(`   Price Impact: ${quote.priceImpact}`);
+
+      // Execute the swap
+      let result;
+      if (exactOutput) {
+        result = await this.swapTokensForExactTokens(
+          account,
+          quote.output.exactAmount,
+          quote.output.symbol,
+          { slippage, deadline, recipient }
+        );
+      } else {
+        result = await this.swapExactTokensForTokens(
+          account,
+          quote.input.amount,
+          quote.input.symbol,
+          { slippage, deadline, recipient }
+        );
+      }
+
+      console.log(`✅ Swap completed successfully!`);
+      console.log(`   Transaction Hash: ${result.receipt.hash}`);
+      console.log(`   Block: ${result.receipt.blockNumber}`);
+      console.log(`   Gas Used: ${result.receipt.gasUsed?.toString() || 'N/A'}`);
+
+      return {
+        success: true,
+        transaction: result.receipt,
+        summary: result.summary,
+        quote: quote,
+        timestamp: new Date().toISOString()
+      };
+
+    } catch (error) {
+      console.error(`❌ Swap execution failed:`, error.message);
+      
+      // Enhanced error handling
+      if (error.message.includes('insufficient funds')) {
+        throw new Error(`Insufficient balance for swap: ${error.message}`);
+      } else if (error.message.includes('user rejected')) {
+        throw new Error(`User rejected the transaction: ${error.message}`);
+      } else if (error.message.includes('slippage')) {
+        throw new Error(`Slippage tolerance exceeded: ${error.message}`);
+      } else if (error.message.includes('deadline')) {
+        throw new Error(`Transaction deadline passed: ${error.message}`);
+      } else {
+        throw new Error(`Swap failed: ${error.message}`);
+      }
+    }
+  }
+
+  /**
+   * Execute optimized swap with price impact protection
+   * @param {Object} account - The account performing the swap
+   * @param {string} tokenInSymbol - Input token symbol
+   * @param {string|number} totalAmount - Total amount to swap
+   * @param {Object} options - Advanced options
+   * @returns {Promise<Object>} Swap results
+   */
+  async executeOptimizedSwap(account, tokenInSymbol, totalAmount, options = {}) {
+    const {
+      maxPriceImpact = 1.0,
+      maxSlippage = 2.0,
+      minTradeSize = 0.001,
+      deadline = Math.floor(Date.now() / 1000) + 600 // 10 minutes for multiple trades
+    } = options;
+
+    console.log(`\n🎯 Executing optimized swap for ${totalAmount} ${tokenInSymbol}`);
+    console.log(`   Max Price Impact: ${maxPriceImpact}%`);
+    console.log(`   Max Slippage: ${maxSlippage}%`);
+
+    const totalAmountNum = Number(totalAmount);
+    
+    // Get optimal trade size
+    const optimal = await this.getOptimalSwapAmount(tokenInSymbol, maxPriceImpact);
+    const optimalAmount = Number(optimal.optimalAmount);
+    
+    console.log(`   Optimal trade size: ${optimalAmount} ${tokenInSymbol}`);
+    console.log(`   Estimated price impact: ${optimal.estimatedPriceImpact}%`);
+
+    // Decide whether to split the trade
+    if (optimalAmount >= totalAmountNum * 0.8) {
+      // Single trade is optimal
+      console.log(`   Strategy: Single trade (optimal)`);
+      return await this.executeSwap(account, tokenInSymbol, totalAmount, {
+        slippage: maxSlippage,
+        deadline
+      });
+    } else {
+      // Split into multiple trades
+      const numTrades = Math.ceil(totalAmountNum / optimalAmount);
+      const tradeAmount = totalAmountNum / numTrades;
+      
+      console.log(`   Strategy: ${numTrades} trades of ${tradeAmount.toFixed(6)} ${tokenInSymbol} each`);
+      
+      const results = [];
+      for (let i = 0; i < numTrades; i++) {
+        console.log(`\n🔢 Executing trade ${i + 1}/${numTrades}`);
+        try {
+          const result = await this.executeSwap(
+            account,
+            tokenInSymbol,
+            tradeAmount.toString(),
+            {
+              slippage: maxSlippage,
+              deadline,
+              recipient: account.address
+            }
+          );
+          results.push({ success: true, tradeIndex: i, result });
+        } catch (error) {
+          console.error(`❌ Trade ${i + 1} failed:`, error.message);
+          results.push({ success: false, tradeIndex: i, error: error.message });
+          break; // Stop on first error
+        }
+      }
+      
+      // Calculate overall results
+      const successfulSwaps = results.filter(r => r.success);
+      const totalInput = successfulSwaps.reduce((sum, r) => sum + Number(r.result.summary.input.amount), 0);
+      const totalOutput = successfulSwaps.reduce((sum, r) => sum + Number(r.result.summary.output.amount), 0);
+      
+      return {
+        strategy: 'split',
+        totalTrades: numTrades,
+        successfulTrades: successfulSwaps.length,
+        failedTrades: results.filter(r => !r.success).length,
+        totalInput,
+        totalOutput,
+        effectivePrice: totalOutput / totalInput,
+        individualResults: results
+      };
+    }
+  }
+  
+  /**
+ * Enhanced optimized swap with MEV/atomic considerations
+ */
+async executeProtectedOptimizedSwap(account, tokenInSymbol, totalAmount, options = {}) {
+    const {
+        useBundle = false, // Try to use MEV bundle if available
+        maxTimeBetweenTrades = 2, // Max seconds between trades
+        minProfitThreshold = 0.005, // Minimum 0.5% improvement to justify risk
+    } = options;
+
+    // First, calculate if it's even worth it
+    const singleTradeQuote = await this.getSwapQuote(totalAmount, tokenInSymbol);
+    const optimizedSimulation = await this.simulateOptimizedSwap(totalAmount, tokenInSymbol);
+    
+    const potentialImprovement = optimizedSimulation.totalOutput - singleTradeQuote.output.amount;
+    const improvementPercentage = potentialImprovement / singleTradeQuote.output.amount;
+    
+    console.log(`📊 Optimization Analysis:`);
+    console.log(`   Single trade: ${singleTradeQuote.output.amount} ${singleTradeQuote.output.symbol}`);
+    console.log(`   Optimized: ${optimizedSimulation.totalOutput} ${singleTradeQuote.output.symbol}`);
+    console.log(`   Potential improvement: ${improvementPercentage.toFixed(4)}%`);
+    
+    // Only proceed if improvement exceeds threshold
+    if (improvementPercentage < minProfitThreshold) {
+        console.log(`⚠️  Optimization not worth the risk - using single trade`);
+        return await this.executeSwap(account, tokenInSymbol, totalAmount, options);
+    }
+    
+    // Check if we can use atomic execution
+    if (useBundle && this.supportsBundling()) {
+        return await this.executeAtomicBatchSwap(account, tokenInSymbol, totalAmount, options);
+    }
+    
+    // Fallback to timed execution with risk warning
+    console.log(`⚠️  WARNING: Executing non-atomic optimized swap`);
+    console.log(`   Risk of front-running between trades`);
+    console.log(`   Actual results may be worse than simulated`);
+    
+    return await this.executeOptimizedSwap(account, tokenInSymbol, totalAmount, {
+        ...options,
+        maxTimeBetweenTrades // Try to execute quickly
+    });
+}
+
+  //
+
 }
 
 // Export DEX_TYPES and SLIPPAGE_TOLERANCE for other files to use
@@ -1753,6 +1984,58 @@ async function demoAdvancedSwapStrategies() {
   }
 }
 
+/**
+ * Demo function showing the new swap execution methods
+ */
+async function demoSwapExecution() {
+  try {
+    console.log("\n🔥 DEMO: New Swap Execution Methods");
+    console.log("=".repeat(50));
+    
+    const hre = require("hardhat");
+    const { ethers } = hre;
+    const { Chain } = require("./Chain.cjs");
+    const chain = await Chain.create(ethers);
+    
+    const USDC_WETH_POOL = addresses.POOLS.UNIV2_WETH_USDC;
+    const pool = await Pool.create(USDC_WETH_POOL, chain, Pool.DEX_TYPES.UNISWAP_V2);
+    
+    const [demoAccount] = await ethers.getSigners();
+    const account = {
+      address: demoAccount.address,
+      signer: demoAccount
+    };
+    
+    console.log(`Using account: ${account.address}`);
+    
+    // Demo the new executeSwap method
+    console.log("\n1. 🔄 EXECUTE SWAP METHOD");
+    console.log("-".repeat(30));
+    
+    const swapResult = await pool.executeSwap(
+      account,
+      "WETH",
+      "0.001", // Small amount for demo
+      {
+        slippage: 0.5,
+        recipient: account.address
+      }
+    );
+    
+    console.log("Swap Result:", {
+      input: swapResult.summary.input,
+      output: swapResult.summary.output,
+      success: swapResult.success
+    });
+    
+    return { swapResult };
+    
+  } catch (error) {
+    console.error("❌ Swap execution demo failed:", error.message);
+    throw error;
+  }
+}
+
 // Update the demo exports to include both swap demos:
 Pool.demo = {
   basicOperations: demoBasicPoolOperations,
@@ -1761,6 +2044,7 @@ Pool.demo = {
   advancedFeatures: demoAdvancedPoolFeatures,
   swapFunctionality: demoSwapFunctionality,
   advancedSwapStrategies: demoAdvancedSwapStrategies, // ← New advanced demo
+  swapExecution:  demoSwapExecution,
   runAll: runAllDemos
 };
 
@@ -1780,7 +2064,8 @@ async function runAllDemos() {
     results.advanced = await demoAdvancedPoolFeatures();
     results.swap = await demoSwapFunctionality();
     results.advancedSwap = await demoAdvancedSwapStrategies(); // ← New demo
-    
+    results.swapExecution = await demoSwapExecution();
+
     console.log("\n" + "=".repeat(60));
     console.log("🎉 ALL POOL DEMOS COMPLETED SUCCESSFULLY!");
     console.log("=".repeat(60));
