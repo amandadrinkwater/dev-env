@@ -1,65 +1,57 @@
 const  addresses  = require('../utils/addresses.cjs');
+const  ABIS  = require('../utils/abis.cjs')
+
 const { Chain } = require('./Chain.cjs');
 const { ERC20Token } = require('./ERC20Token.cjs')
-const  ABIS  = require('../utils/abis.cjs')
+const { ethers } = require("ethers");
 
 const WETH_ABI = ABIS.WETH_ABI
 
 class WETH extends ERC20Token {
 
-    /*
-
     
+    constructor(tokenAddress, chain) {
+        super(tokenAddress, chain);
 
-
-    */
-
-    constructor (tokenAddress, chain) {
-        super(tokenAddress, chain)
-
-        console.log("Constructor WETH")
-
-        // this.contract = new ethers.Contract(tokenAddress, WETH_ABI, chain.provider);
-            
-
+        this.wethContract = new ethers.Contract(tokenAddress, WETH_ABI, chain.provider);
     }
-
+    
+    async init() {
+        
+        // Call parent init first
+        await super.init();
+        console.log("✅ Parent init completed");
+        console.log("🔍 After init - has wrapETH?", typeof this.wrapETH);
+        return this;
+    }
 
 
   // Then when you need to wrap:
     async wrapETH(account, amount) {
-
-        console.log(`Account: ${account} Amount: ${amount}`)
-
-        // check if it has funds 
-
-        /*
-        const wethWithSigner = this.contract.connect(account.signer);
-        const tx = await wethWithSigner.deposit({
-            value: ethers.parseEther(amount.toString())
-        });
-        return await tx.wait(); */
-    }
-
+    // Use the WETH-specific contract for WETH functions
+    const wethWithSigner = this.wethContract.connect(account.signer);
+    const tx = await wethWithSigner.deposit({
+      value: ethers.parseEther(amount.toString())
+    });
+    return await tx.wait();
+  }
     // create for sepolia and for mainnet
 
     static async createHardhat() {
-
+        // In your WETH.createHardhat method, add debugging:
         const tokenAddress = addresses.TOKENS.WETH;
-        const chain = await Chain.createHardhat()
 
-        const key = `${chain.chainType}:${tokenAddress}`;
-    
-        if (!ERC20Token.instances.has(key)) {
-            const token = await new WETH(tokenAddress, chain);
-            await token.init(); 
-            console.log("WETH Address:" + token.getAddress())
-            ERC20Token.instances.set(key, token);
-        }
-    
-        return ERC20Token.instances.get(key);
+        const chain = await Chain.createHardhat();
+        
+        console.log("🚀 Creating fresh WETH instance (no cache)...");
+        const token = new WETH(tokenAddress, chain);
+        await token.init();
+        
+        console.log("✅ Fresh WETH instance created");
+        return token;
     }
 
+ 
     static async createMainnet() {
         //not tested
 

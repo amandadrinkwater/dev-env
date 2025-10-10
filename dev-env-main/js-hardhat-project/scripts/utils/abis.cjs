@@ -22,9 +22,14 @@ module.exports = {
   ],
 
   WETH_ABI: [
+    
+    "function name() view returns (string)",
+    "function symbol() view returns (string)",
+    "function decimals() view returns (uint8)",
+    "function balanceOf(address) view returns (uint)",
     "function deposit() payable",
-    "function withdraw(uint256)",
-    "function balanceOf(address) view returns (uint256)"
+    "function withdraw(uint wad) public"
+  
   ],
 
   UNIV2_PAIR: [

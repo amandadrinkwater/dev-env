@@ -2010,16 +2010,16 @@ async function demoSwapExecution() {
       // Create accounts
     
     const abbot = await Account.createAbbot();
+
     const account = {
       address: abbot.address,
       signer: abbot.signer
     };
     
 
-    const wethHardhat = WETH.createHardhat()
+    const wethHardhat = await WETH.createHardhat()
 
-    await wethHardhat.wrapETH(abbot, "0.001") 
-    
+     await wethHardhat.wrapETH(abbot, "0.01")
     // Demo the new executeSwap method
     console.log("\n1. 🔄 EXECUTE SWAP METHOD");
     console.log("-".repeat(30));
@@ -2027,7 +2027,7 @@ async function demoSwapExecution() {
     const swapResult = await pool.executeSwap(
       account,
       "WETH", // ?
-      "0.001", // Small amount for demo
+      "0.01", // Small amount for demo
       {
         slippage: 0.5,
         recipient: account.address
