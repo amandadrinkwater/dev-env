@@ -1995,7 +1995,11 @@ async function demoSwapExecution() {
     
     const hre = require("hardhat");
     const { ethers } = hre;
+    
     const { Chain } = require("./Chain.cjs");
+
+    const { WETH } = require("./Tokens.cjs");
+
     const chain = await Chain.create(ethers);
     
     const USDC_WETH_POOL = addresses.POOLS.UNIV2_WETH_USDC;
@@ -2003,17 +2007,16 @@ async function demoSwapExecution() {
     
     // const [demoAccount] = await ethers.getSigners();
 
-    const abbot = await Account.createAbbot()
+      // Create accounts
+    
+    const abbot = await Account.createAbbot();
     const account = {
       address: abbot.address,
       signer: abbot.signer
     };
     
-    console.log(`Using account: ${account.address}`);
 
-    const { WETH } = require("./Tokens.cjs")
-
-    const wethHardhat = await WETH.createHardhat()
+    const wethHardhat = WETH.createHardhat()
 
     await wethHardhat.wrapETH(abbot, "0.001") 
     

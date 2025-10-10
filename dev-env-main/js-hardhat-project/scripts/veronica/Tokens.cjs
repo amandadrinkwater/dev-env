@@ -1,6 +1,9 @@
 const  addresses  = require('../utils/addresses.cjs');
 const { Chain } = require('./Chain.cjs');
-const {ERC20Token } = require('./ERC20Token.cjs')
+const { ERC20Token } = require('./ERC20Token.cjs')
+const  ABIS  = require('../utils/abis.cjs')
+
+const WETH_ABI = ABIS.WETH_ABI
 
 class WETH extends ERC20Token {
 
@@ -14,18 +17,28 @@ class WETH extends ERC20Token {
     constructor (tokenAddress, chain) {
         super(tokenAddress, chain)
 
+        console.log("Constructor WETH")
+
+        // this.contract = new ethers.Contract(tokenAddress, WETH_ABI, chain.provider);
+            
+
     }
+
+
 
   // Then when you need to wrap:
     async wrapETH(account, amount) {
 
+        console.log(`Account: ${account} Amount: ${amount}`)
+
         // check if it has funds 
-        
+
+        /*
         const wethWithSigner = this.contract.connect(account.signer);
         const tx = await wethWithSigner.deposit({
             value: ethers.parseEther(amount.toString())
         });
-        return await tx.wait();
+        return await tx.wait(); */
     }
 
     // create for sepolia and for mainnet
@@ -38,8 +51,9 @@ class WETH extends ERC20Token {
         const key = `${chain.chainType}:${tokenAddress}`;
     
         if (!ERC20Token.instances.has(key)) {
-            const token = new WETH(tokenAddress, chain);
-            await token.init();
+            const token = await new WETH(tokenAddress, chain);
+            await token.init(); 
+            console.log("WETH Address:" + token.getAddress())
             ERC20Token.instances.set(key, token);
         }
     
@@ -55,7 +69,7 @@ class WETH extends ERC20Token {
         const key = `${chain.chainType}:${tokenAddress}`;
     
         if (!ERC20Token.instances.has(key)) {
-            const token = new WETH(tokenAddress, chain);
+            const token = await new WETH(tokenAddress, chain);
             await token.init();
             ERC20Token.instances.set(key, token);
         }
@@ -119,8 +133,8 @@ class USDC extends ERC20Token {
     }
 
     static async createSepolia() {
-        // note tested
-         const tokenAddress = addresses.TOKENS.USDC; 
+        // not tested
+        const tokenAddress = addresses.TOKENS.USDC; 
         const chain = await Chain.createEthereumSepolia();
 
         const key = `${chain.chainType}:${tokenAddress}`;
