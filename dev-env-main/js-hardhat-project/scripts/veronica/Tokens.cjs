@@ -1,16 +1,31 @@
-
 const  addresses  = require('../utils/addresses.cjs');
 const { Chain } = require('./Chain.cjs');
 const {ERC20Token } = require('./ERC20Token.cjs')
 
 class WETH extends ERC20Token {
 
+    /*
+
+    
+
+
+    */
+
     constructor (tokenAddress, chain) {
         super(tokenAddress, chain)
+
     }
 
-    async wrap () {
+  // Then when you need to wrap:
+    async wrapETH(account, amount) {
+
+        // check if it has funds 
         
+        const wethWithSigner = this.contract.connect(account.signer);
+        const tx = await wethWithSigner.deposit({
+            value: ethers.parseEther(amount.toString())
+        });
+        return await tx.wait();
     }
 
     // create for sepolia and for mainnet

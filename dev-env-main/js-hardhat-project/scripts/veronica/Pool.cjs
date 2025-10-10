@@ -64,6 +64,7 @@ const { ethers, assert } = require("ethers");
 const addresses = require("../utils/addresses.cjs");
 const abis = require("../utils/abis.cjs");
 const { ERC20Token } = require("./ERC20Token.cjs");
+const { Account } = require("./Account.cjs");
 
 const ERC20_ABI = abis.ERC20;
 const UNISWAP_V2_PAIR_ABI = abis.UNIV2_PAIR;
@@ -2000,13 +2001,21 @@ async function demoSwapExecution() {
     const USDC_WETH_POOL = addresses.POOLS.UNIV2_WETH_USDC;
     const pool = await Pool.create(USDC_WETH_POOL, chain, Pool.DEX_TYPES.UNISWAP_V2);
     
-    const [demoAccount] = await ethers.getSigners();
+    // const [demoAccount] = await ethers.getSigners();
+
+    const abbot = await Account.createAbbot()
     const account = {
-      address: demoAccount.address,
-      signer: demoAccount
+      address: abbot.address,
+      signer: abbot.signer
     };
     
     console.log(`Using account: ${account.address}`);
+
+    const { WETH } = require("./Tokens.cjs")
+
+    const wethHardhat = await WETH.createHardhat()
+
+    await wethHardhat.wrapETH(abbot, "0.001") 
     
     // Demo the new executeSwap method
     console.log("\n1. 🔄 EXECUTE SWAP METHOD");
@@ -2014,7 +2023,7 @@ async function demoSwapExecution() {
     
     const swapResult = await pool.executeSwap(
       account,
-      "WETH",
+      "WETH", // ?
       "0.001", // Small amount for demo
       {
         slippage: 0.5,
