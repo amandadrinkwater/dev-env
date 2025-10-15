@@ -18,6 +18,7 @@ mencionar que soh roda em ethers v6 na documentacao das funcoes
 
 
 
+
 ==========================================================
 
 comecar a baixar githubs preselecionados
@@ -67,3 +68,18 @@ wrap WETH, colocar funcoes especificas, colocar ABI, balanceof
 
 seguir recomendacoes Deep
 
+
+
+em UniswapQueryData linha 144, console.log(`🔧 Creating Pool ${i + 1}/${pairs.length}: ${poolAddress}`);
+
+                    // Create Pool object (this makes individual RPC calls)
+                    const pool = await Pool.create(poolAddress, this.chain, dexType); // need to use CreateFrom Data
+                    
+                    // Verify the pool was initialized correctly
+                    if (pool && pool.token0 && pool.token1) {
+                        pools.push(pool);
+                        successCount++;
+                        
+usar createFromData
+
+no CHat, ele deu uma dica de um helper para ler classes java e transformaar em Json em Jscript... util para trans-processos

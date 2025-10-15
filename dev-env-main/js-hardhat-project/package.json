@@ -12,19 +12,17 @@
     "run-arbsim": "npx hardhat run scripts/arb-sim-uni-sushi.cjs --network hardhat",
     "run_demo_js": "node src/jscript/index.cjs",
     "deploy": "npx hardhat run scripts/deploy.cjs --network hardhat",
-    
     "test:pool": "node ./scripts/veronica/main.js",
     "test:erc20": "node -e \"require('./main.js').testERC20TokenFunctions().catch(console.error)\"",
     "test:all": "npm run test:pool"
-  
   },
-
   "keywords": [],
   "author": "",
   "license": "ISC",
   "devDependencies": {
     "@nomicfoundation/hardhat-toolbox": "^6.1.0",
-    "hardhat": "^2.26.2"
+    "hardhat": "^2.26.2",
+    "java": "^0.16.2"
   },
   "dependencies": {
     "@openzeppelin/contracts": "^5.4.0",

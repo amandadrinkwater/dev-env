@@ -3,7 +3,7 @@ const addresses = require("../utils/addresses.cjs");
 const abis = require("../utils/abis.cjs");
 const { ERC20Token } = require("./ERC20Token.cjs");
 const contracts = require("../utils/contracts.cjs");
-const Pool = require("./Pool.cjs"); // Import the Pool class
+const { Pool } = require("./Pool.cjs"); // Import the Pool class
 const { Chain } = require("./Chain.cjs");
 
 
@@ -16,7 +16,7 @@ class ContractUniswapQuery {
 
         this.id = 'Contract UniswapQuery';
         this.address = contracts.FlashBotsUniswapQuery.address;
-        this.chain = Chain.; // ethereum
+        this.chain = chain; 
         this.provider = chain.provider;
         this.contract = new ethers.Contract(this.address, contracts.FlashBotsUniswapQuery.ABI, this.provider);
         
@@ -29,6 +29,18 @@ class ContractUniswapQuery {
             ContractUniswapQuery.instance = new ContractUniswapQuery(chain);
         }
         return ContractUniswapQuery.instance;
+    }
+
+    static async getInstanceAtHardhat() {
+        const hre = require("hardhat");
+        const { ethers } = hre;
+        return await ContractUniswapQuery.getInstance(ethers);
+    }
+
+    static async getInstanceAtMainNet() {
+
+        // still need to update
+        return null;
     }
 
     async getActualBlock() {
@@ -129,7 +141,7 @@ class ContractUniswapQuery {
                     console.log(`🔧 Creating Pool ${i + 1}/${pairs.length}: ${poolAddress}`);
 
                     // Create Pool object (this makes individual RPC calls)
-                    const pool = await Pool.create(poolAddress, this.chain, dexType);
+                    const pool = await Pool.create(poolAddress, this.chain, dexType); // need to use CreateFrom Data
                     
                     // Verify the pool was initialized correctly
                     if (pool && pool.token0 && pool.token1) {
@@ -514,12 +526,18 @@ module.exports = { ContractUniswapQuery };
 
 // Enhanced example usage
 async function main() {
-    const hre = require("hardhat");
+   
+   
+   /* const hre = require("hardhat");
     const { ethers } = hre;
     
     // Get singleton instance
     const uniswapQuery = await ContractUniswapQuery.getInstance(ethers);
+    */
+
+    const uniswapQuery = await ContractUniswapQuery.getInstanceAtHardhat()
     
+
     // Example 1: Compare performance
     console.log("\n1. 📊 PERFORMANCE COMPARISON");
     await uniswapQuery.comparePerformance(0, 2);

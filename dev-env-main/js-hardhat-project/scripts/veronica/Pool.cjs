@@ -2125,4 +2125,6 @@ if (require.main === module) {
 
 Pool.instances = new Map(); 
 
+Pool.DEX_TYPES = DEX_TYPES
+
 module.exports = { Pool };
