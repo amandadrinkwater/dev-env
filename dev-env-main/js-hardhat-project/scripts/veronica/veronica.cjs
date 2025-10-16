@@ -4,14 +4,35 @@ const { ContractUniswapQuery } = require("./ContractUniswapQuery.cjs");
 
 class Veronica {
 
-    constructor (mainnetFlag = true) { 
+    constructor () { 
 
       this.whale = null;
       this.abbot = null;
       this.ContractUniswapQuery = null;
 
-      this.mainnetFlag = mainnetFlag
+    }
 
+    static async getInstanceHardhat () {
+
+      if (!Veronica._instance ) {
+        Veronica._instance = new Veronica() // to run on hardhat
+        await Veronica._instance.initHardhat()
+      }
+
+      return Veronica._instance
+    }
+
+    // later we can create a generic get instaca that read from Chain
+    // like Account,etc... 
+
+    static async getInstanceMainnet () {
+
+      if (!Veronica._instance ) {
+        Veronica._instance = new Veronica() // to run on hardhat
+        await Veronica._instance.initMainnet()
+      }
+
+      return Veronica._instance
     }
 
     async initHardhat() {
@@ -23,23 +44,18 @@ class Veronica {
     }
 
     async initMainnet() {
-
+      // ?? 
     }
 
-    async execute() {
+    async execute() { 
 
-      if (!this.whale || !this.abbot) {
-        if (!this.mainnetFlag) {
-            await this.initHardhat();
-        }
-        else {
-            await this.initMainnet(); // stil need to implement
-        }
-      }
-
+      
       // Small batch - will use individual calls
       const smallPools = await this.uniswapQuery.getPoolsByIndexRangeSmart(0, 9, { strategy: 'auto' });
       console.log(`Small batch (0-9): ${smallPools.length} pools`);
+
+      const balanceOfAbbot = await this.abbot.getNativeBalance()
+      console.log(`Balance of Abbot: ${balanceOfAbbot}`)
 
       // yus
 
@@ -48,7 +64,15 @@ class Veronica {
     }
 }
 
-const veronica = new Veronica(false) // to run on hardhat
 
-veronica.execute()
+// Wrap execution in an async function
+async function main() {
+    const veronica = await Veronica.getInstanceHardhat();
+    await veronica.execute();
+}
 
+// Execute and handle errors
+main().catch((error) => {
+    console.error(error);
+    process.exit(1);
+});
